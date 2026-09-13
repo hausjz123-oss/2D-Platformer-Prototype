@@ -93,5 +93,5 @@ position = Vector2(92, 475)
 position = Vector2(3, -60)
 
 [node name="SmmNsmbuMushroomPlatform" type="Sprite2D" parent="." unique_id=1478508907]
-position = Vector2(327, 339)
+position = Vector2(354, 355)
 texture = ExtResource("4_fkd63")
