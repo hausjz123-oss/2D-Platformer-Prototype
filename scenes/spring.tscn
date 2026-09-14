@@ -1,0 +1,20 @@
+[gd_scene format=3 uid="uid://cvkpn1exj3fa"]
+
+[ext_resource type="Script" uid="uid://gf1q600t2tou" path="res://scripts/spring.gd" id="1_6vrsj"]
+[ext_resource type="Texture2D" uid="uid://ye3nq8dhpbbh" path="res://assets/SMM-NSMBU-MushroomPlatform.webp" id="1_61klm"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_384fj"]
+
+[node name="Spring" type="Area2D" unique_id=673399740]
+script = ExtResource("1_6vrsj")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1761038515]
+rotation = 1.5707964
+scale = Vector2(8.421489, 9.282622)
+shape = SubResource("RectangleShape2D_384fj")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=740345780]
+rotation = 1.5707964
+texture = ExtResource("1_61klm")
+
+[connection signal="body_entered" from="." to="." method="_on_body_entered"]

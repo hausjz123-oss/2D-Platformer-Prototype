@@ -3,7 +3,7 @@
 [ext_resource type="PackedScene" uid="uid://8lr3x0dbewtf" path="res://scenes/player.tscn" id="1_eduo0"]
 [ext_resource type="PackedScene" uid="uid://dtbds3sx3f8db" path="res://scenes/Platform.tscn" id="2_leees"]
 [ext_resource type="Texture2D" uid="uid://b7blc6c8esc47" path="res://icon.svg" id="3_ard34"]
-[ext_resource type="Texture2D" uid="uid://ye3nq8dhpbbh" path="res://assets/SMM-NSMBU-MushroomPlatform.webp" id="4_fkd63"]
+[ext_resource type="PackedScene" uid="uid://cvkpn1exj3fa" path="res://scenes/spring.tscn" id="4_fkd63"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_fkd63"]
 texture = ExtResource("3_ard34")
@@ -92,6 +92,14 @@ position = Vector2(92, 475)
 [node name="Camera2D2" type="Camera2D" parent="Player" unique_id=316202143]
 position = Vector2(3, -60)
 
-[node name="SmmNsmbuMushroomPlatform" type="Sprite2D" parent="." unique_id=1478508907]
-position = Vector2(354, 355)
-texture = ExtResource("4_fkd63")
+[node name="Spring" parent="." unique_id=673399740 instance=ExtResource("4_fkd63")]
+position = Vector2(831, 416)
+rotation = -1.9690397
+
+[node name="Spring2" parent="." unique_id=898940019 instance=ExtResource("4_fkd63")]
+position = Vector2(683, -274.99997)
+rotation = 2.345106
+
+[node name="Spring3" parent="." unique_id=1325568418 instance=ExtResource("4_fkd63")]
+position = Vector2(386, 116)
+rotation = -2.407323
