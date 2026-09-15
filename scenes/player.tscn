@@ -17,7 +17,9 @@ animations = [{
 "speed": 5.0
 }]
 
-[node name="Player" type="CharacterBody2D" unique_id=1371040664]
+[sub_resource type="CircleShape2D" id="CircleShape2D_384fj"]
+
+[node name="Player" type="CharacterBody2D" unique_id=1371040664 groups=["Players"]]
 script = ExtResource("1_g2els")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1660034217]
@@ -56,6 +58,9 @@ position = Vector2(-13, -3.5)
 scale = Vector2(0.0674157, 0.11666667)
 texture = ExtResource("3_qhqgy")
 
+[node name="Speed_Limit_H_Decay_Timer" type="Timer" parent="Spedometer_H" unique_id=351960346]
+one_shot = true
+
 [node name="Spedometer_V" type="Node2D" parent="." unique_id=1273506005]
 position = Vector2(34, -184)
 rotation = -1.5707964
@@ -79,6 +84,9 @@ position = Vector2(-14, -3.5)
 scale = Vector2(0.0674157, 0.11666667)
 texture = ExtResource("3_qhqgy")
 
+[node name="Speed_Limit_V_Decay_Timer" type="Timer" parent="Spedometer_V" unique_id=271034590]
+one_shot = true
+
 [node name="Proximity_Detector" type="Node2D" parent="." unique_id=793240628]
 position = Vector2(-20, -192)
 
@@ -100,3 +108,20 @@ scale = Vector2(0.2893037, 0.2893037)
 color = Color(0.99997836, 0.52493083, 0.5333039, 1)
 polygon = PackedVector2Array(-29.837433, -7.2171326, -31.837433, 14.782867, -13.337433, 30.782867, 19.662567, 27.282867, 30.662567, 6.7828674, 23.662567, -19.217133, 6.415161, -30.29862, -18.856354, -26.542046)
 uv = PackedVector2Array(-109.75, -26, -111.75, -4, -93.25, 12, -60.25, 8.5, -49.25, -12, -56.25, -38, -74.25, -55, -95.25, -50)
+
+[node name="Hammer_Hurtbox" type="Area2D" parent="." unique_id=1026386652]
+position = Vector2(131, -164)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hammer_Hurtbox" unique_id=1776399906]
+position = Vector2(-131, 97)
+rotation = -0.029064475
+scale = Vector2(22.278505, 22.278505)
+shape = SubResource("CircleShape2D_384fj")
+
+[node name="Hammer_cooldown" type="Timer" parent="." unique_id=1346299692]
+wait_time = 0.5
+one_shot = true
+
+[node name="No_Grav_Time" type="Timer" parent="." unique_id=618538228]
+wait_time = 10.885
+one_shot = true

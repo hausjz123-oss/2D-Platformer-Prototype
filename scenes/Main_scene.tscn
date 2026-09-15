@@ -85,6 +85,11 @@ tile_set = SubResource("TileSet_384fj")
 
 [node name="Platform" parent="." unique_id=1111422621 instance=ExtResource("2_leees")]
 position = Vector2(447, 552)
+scale = Vector2(20.319998, 1)
+
+[node name="Platform2" parent="." unique_id=423962166 instance=ExtResource("2_leees")]
+position = Vector2(-859, -285)
+scale = Vector2(3.92, 1)
 
 [node name="Player" parent="." unique_id=144186611 instance=ExtResource("1_eduo0")]
 position = Vector2(92, 475)
@@ -94,11 +99,12 @@ position = Vector2(3, -60)
 
 [node name="Spring" parent="." unique_id=673399740 instance=ExtResource("4_fkd63")]
 position = Vector2(831, 416)
-rotation = -1.9690397
+rotation = -1.5944188
 
 [node name="Spring2" parent="." unique_id=898940019 instance=ExtResource("4_fkd63")]
 position = Vector2(683, -274.99997)
-rotation = 2.345106
+rotation = 2.6580443
+Strength_Mode = 2
 
 [node name="Spring3" parent="." unique_id=1325568418 instance=ExtResource("4_fkd63")]
 position = Vector2(386, 116)

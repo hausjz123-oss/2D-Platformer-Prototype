@@ -5,10 +5,13 @@
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_384fj"]
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ugdbb"]
+
 [node name="Spring" type="Area2D" unique_id=673399740]
 script = ExtResource("1_6vrsj")
+Strength_Mode = 1
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1761038515]
+[node name="Springaling" type="CollisionShape2D" parent="." unique_id=1761038515]
 rotation = 1.5707964
 scale = Vector2(8.421489, 9.282622)
 shape = SubResource("RectangleShape2D_384fj")
@@ -16,5 +19,12 @@ shape = SubResource("RectangleShape2D_384fj")
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=740345780]
 rotation = 1.5707964
 texture = ExtResource("1_61klm")
+
+[node name="StaticBody2D" type="StaticBody2D" parent="." unique_id=161246447]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D" unique_id=266229221]
+position = Vector2(-30.000002, -1)
+scale = Vector2(6.011988, 6.011988)
+shape = SubResource("RectangleShape2D_ugdbb")
 
 [connection signal="body_entered" from="." to="." method="_on_body_entered"]
