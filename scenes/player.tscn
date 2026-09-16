@@ -6,6 +6,10 @@
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_384fj"]
 
+[sub_resource type="CircleShape2D" id="CircleShape2D_384fj"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_hlod6"]
+
 [sub_resource type="SpriteFrames" id="SpriteFrames_384fj"]
 animations = [{
 "frames": [{
@@ -17,8 +21,6 @@ animations = [{
 "speed": 5.0
 }]
 
-[sub_resource type="CircleShape2D" id="CircleShape2D_384fj"]
-
 [node name="Player" type="CharacterBody2D" unique_id=1371040664 groups=["Players"]]
 script = ExtResource("1_g2els")
 
@@ -27,9 +29,39 @@ position = Vector2(0, -69)
 scale = Vector2(4.583552, 4.583552)
 shape = SubResource("CapsuleShape2D_384fj")
 
-[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="CollisionShape2D" unique_id=229647181]
-position = Vector2(-1.9073486e-06, -0.125)
-scale = Vector2(0.15625001, 0.23242189)
+[node name="Hammer_Hurtbox" type="Area2D" parent="." unique_id=1026386652]
+position = Vector2(131, -164)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hammer_Hurtbox" unique_id=1776399906]
+position = Vector2(-131, 97)
+rotation = -0.029064475
+scale = Vector2(22.278505, 22.278505)
+shape = SubResource("CircleShape2D_384fj")
+
+[node name="Proximity_Levels" type="Node2D" parent="." unique_id=1058067449]
+position = Vector2(0, -68)
+
+[node name="proximity_level_1" type="Area2D" parent="Proximity_Levels" unique_id=1017091978]
+scale = Vector2(8.26, 8.26)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Proximity_Levels/proximity_level_1" unique_id=699573211]
+shape = SubResource("CircleShape2D_hlod6")
+
+[node name="proximity_level_2" type="Area2D" parent="Proximity_Levels" unique_id=388953955]
+scale = Vector2(13.23, 13.23)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Proximity_Levels/proximity_level_2" unique_id=1809775462]
+shape = SubResource("CircleShape2D_hlod6")
+
+[node name="proximity_level_3" type="Area2D" parent="Proximity_Levels" unique_id=1338391546]
+scale = Vector2(17.755, 17.755)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Proximity_Levels/proximity_level_3" unique_id=1555335669]
+shape = SubResource("CircleShape2D_hlod6")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=229647181]
+position = Vector2(-8.742431e-06, -69.572945)
+scale = Vector2(0.71618, 1.0653177)
 sprite_frames = SubResource("SpriteFrames_384fj")
 
 [node name="RayCast2D" type="RayCast2D" parent="." unique_id=401702390]
@@ -37,58 +69,9 @@ position = Vector2(0, -68)
 scale = Vector2(3.1587424, 5.865334)
 target_position = Vector2(70, 0)
 
-[node name="Spedometer_H" type="Node2D" parent="." unique_id=1083741336]
-position = Vector2(-17, -148)
-
-[node name="Background_H" type="ColorRect" parent="Spedometer_H" unique_id=1605323299]
-offset_left = -42.0
-offset_top = -7.5
-offset_right = 39.0
-offset_bottom = 6.5
-
-[node name="Speed_Meter_H" type="ColorRect" parent="Spedometer_H" unique_id=974472920]
-offset_left = -42.0
-offset_top = -7.5
-offset_right = -14.0
-offset_bottom = 6.5
-color = Color(1, 0, 0, 1)
-
-[node name="Speed_Limit_H" type="Sprite2D" parent="Spedometer_H" unique_id=1410912838]
-position = Vector2(-13, -3.5)
-scale = Vector2(0.0674157, 0.11666667)
-texture = ExtResource("3_qhqgy")
-
-[node name="Speed_Limit_H_Decay_Timer" type="Timer" parent="Spedometer_H" unique_id=351960346]
-one_shot = true
-
-[node name="Spedometer_V" type="Node2D" parent="." unique_id=1273506005]
-position = Vector2(34, -184)
-rotation = -1.5707964
-
-[node name="Background_V" type="ColorRect" parent="Spedometer_V" unique_id=859605499]
-offset_left = -43.0
-offset_top = -7.5
-offset_right = 38.0
-offset_bottom = 6.5
-
-[node name="Speed_Meter_V" type="ColorRect" parent="Spedometer_V" unique_id=2111810789]
-offset_left = -43.0
-offset_top = -7.5
-offset_right = -15.0
-offset_bottom = 6.5
-scale = Vector2(1.5599952, 1)
-color = Color(1, 0, 0, 1)
-
-[node name="Speed_Limit_V" type="Sprite2D" parent="Spedometer_V" unique_id=956649546]
-position = Vector2(-14, -3.5)
-scale = Vector2(0.0674157, 0.11666667)
-texture = ExtResource("3_qhqgy")
-
-[node name="Speed_Limit_V_Decay_Timer" type="Timer" parent="Spedometer_V" unique_id=271034590]
-one_shot = true
-
 [node name="Proximity_Detector" type="Node2D" parent="." unique_id=793240628]
-position = Vector2(-20, -192)
+position = Vector2(-96, -205)
+scale = Vector2(2.5570304, 2.5570304)
 
 [node name="Prox_Shine" type="Polygon2D" parent="Proximity_Detector" unique_id=335067714]
 position = Vector2(-7.6293945e-06, 0)
@@ -109,14 +92,54 @@ color = Color(0.99997836, 0.52493083, 0.5333039, 1)
 polygon = PackedVector2Array(-29.837433, -7.2171326, -31.837433, 14.782867, -13.337433, 30.782867, 19.662567, 27.282867, 30.662567, 6.7828674, 23.662567, -19.217133, 6.415161, -30.29862, -18.856354, -26.542046)
 uv = PackedVector2Array(-109.75, -26, -111.75, -4, -93.25, 12, -60.25, 8.5, -49.25, -12, -56.25, -38, -74.25, -55, -95.25, -50)
 
-[node name="Hammer_Hurtbox" type="Area2D" parent="." unique_id=1026386652]
-position = Vector2(131, -164)
+[node name="Spedometer_H" type="Node2D" parent="." unique_id=1083741336]
+position = Vector2(-138, 25)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Hammer_Hurtbox" unique_id=1776399906]
-position = Vector2(-131, 97)
-rotation = -0.029064475
-scale = Vector2(22.278505, 22.278505)
-shape = SubResource("CircleShape2D_384fj")
+[node name="Background_H" type="ColorRect" parent="Spedometer_H" unique_id=1605323299]
+offset_left = -42.0
+offset_top = -7.5
+offset_right = 245.0
+offset_bottom = 22.0
+
+[node name="Speed_Meter_H" type="ColorRect" parent="Spedometer_H" unique_id=974472920]
+offset_left = -42.0
+offset_top = -7.5
+offset_right = 51.0
+offset_bottom = 22.0
+color = Color(1, 0, 0, 1)
+
+[node name="Speed_Limit_H" type="Sprite2D" parent="Spedometer_H" unique_id=1410912838]
+position = Vector2(-13, 1)
+scale = Vector2(0.23197363, 0.24816974)
+texture = ExtResource("3_qhqgy")
+
+[node name="Speed_Limit_H_Decay_Timer" type="Timer" parent="Spedometer_H" unique_id=351960346]
+one_shot = true
+
+[node name="Spedometer_V" type="Node2D" parent="." unique_id=1273506005]
+position = Vector2(93, -41)
+rotation = -1.5707964
+
+[node name="Background_V" type="ColorRect" parent="Spedometer_V" unique_id=859605499]
+offset_left = -43.0
+offset_top = -7.5
+offset_right = 185.62001
+offset_bottom = 21.625008
+
+[node name="Speed_Meter_V" type="ColorRect" parent="Spedometer_V" unique_id=2111810789]
+offset_left = -43.0
+offset_top = -7.5
+offset_right = 22.907242
+offset_bottom = 21.867798
+color = Color(1, 0, 0, 1)
+
+[node name="Speed_Limit_V" type="Sprite2D" parent="Spedometer_V" unique_id=956649546]
+position = Vector2(-14, 0.9999995)
+scale = Vector2(0.22094674, 0.2506371)
+texture = ExtResource("3_qhqgy")
+
+[node name="Speed_Limit_V_Decay_Timer" type="Timer" parent="Spedometer_V" unique_id=271034590]
+one_shot = true
 
 [node name="Hammer_cooldown" type="Timer" parent="." unique_id=1346299692]
 wait_time = 0.5

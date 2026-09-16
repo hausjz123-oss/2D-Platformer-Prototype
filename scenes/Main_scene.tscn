@@ -84,15 +84,16 @@ tile_map_data = PackedByteArray("AAACAAQAAAAAAAAAAAACAAUAAAAAAAEAAAACAAYAAAAAAAI
 tile_set = SubResource("TileSet_384fj")
 
 [node name="Platform" parent="." unique_id=1111422621 instance=ExtResource("2_leees")]
-position = Vector2(447, 552)
-scale = Vector2(20.319998, 1)
+position = Vector2(447, 477)
+scale = Vector2(45.393223, 1.0312971)
 
 [node name="Platform2" parent="." unique_id=423962166 instance=ExtResource("2_leees")]
-position = Vector2(-859, -285)
-scale = Vector2(3.92, 1)
+position = Vector2(-1536, -373)
+scale = Vector2(23.019144, 1.096719)
 
 [node name="Player" parent="." unique_id=144186611 instance=ExtResource("1_eduo0")]
 position = Vector2(92, 475)
+max_walk_speed = 500.0
 
 [node name="Camera2D2" type="Camera2D" parent="Player" unique_id=316202143]
 position = Vector2(3, -60)
@@ -109,3 +110,12 @@ Strength_Mode = 2
 [node name="Spring3" parent="." unique_id=1325568418 instance=ExtResource("4_fkd63")]
 position = Vector2(386, 116)
 rotation = -2.407323
+
+[node name="Spring4" parent="." unique_id=1554839578 instance=ExtResource("4_fkd63")]
+position = Vector2(-2058.9998, 403.99997)
+Strength_Mode = 2
+
+[node name="Spring5" parent="." unique_id=1227943536 instance=ExtResource("4_fkd63")]
+position = Vector2(1161, 404)
+rotation = 4.712389
+Strength_Mode = 2
