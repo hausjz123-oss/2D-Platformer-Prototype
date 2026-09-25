@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://kxhn3rjjhome"]
+
+[ext_resource type="Script" uid="uid://blboj7gg8r8nv" path="res://scripts/grav_test_player.gd" id="1_n5o70"]
+[ext_resource type="Texture2D" uid="uid://b7blc6c8esc47" path="res://icon.svg" id="2_8cg6q"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_384fj"]
+radius = 6.882351
+height = 20.486996
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_384fj"]
+
+[node name="Grav_Test_player" type="CharacterBody2D" unique_id=855718383]
+script = ExtResource("1_n5o70")
+
+[node name="Icon" type="Sprite2D" parent="." unique_id=795304166]
+position = Vector2(0, -64)
+texture = ExtResource("2_8cg6q")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=890590108]
+position = Vector2(0, -64.99999)
+scale = Vector2(6.2478657, 6.2478657)
+shape = SubResource("CapsuleShape2D_384fj")
+
+[node name="Area2D" type="Area2D" parent="." unique_id=383611498]
+scale = Vector2(1.1040462, 3.625)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D" unique_id=1327216323]
+shape = SubResource("RectangleShape2D_384fj")

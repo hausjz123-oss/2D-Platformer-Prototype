@@ -1,0 +1,39 @@
+[gd_scene format=3 uid="uid://lg3e27vq34xa"]
+
+[ext_resource type="PackedScene" uid="uid://dtbds3sx3f8db" path="res://scenes/Platform.tscn" id="1_ubtch"]
+[ext_resource type="PackedScene" uid="uid://kxhn3rjjhome" path="res://scenes/grav_test_player.tscn" id="2_welln"]
+[ext_resource type="Script" uid="uid://cfs20w8fjteig" path="res://scripts/curved_terrain.gd" id="3_welln"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_ubtch"]
+
+[sub_resource type="Curve2D" id="Curve2D_n8avm"]
+bake_interval = 50.0
+_data = {
+"points": PackedVector2Array(0, 0, 0, 0, -2, -3, 0, 0, 0, 0, -2, 83, 0, 0, 0, 0, 1798, 146, 0, 0, 0, 0, 1841, -1860, 0, 0, 0, 0, -25, -1860, 0, 0, 0, 0, -18, -1676, -477.04114, -660.5185, 477.04114, 660.5185, 1364, -1383, 171.24553, -134.55006, -171.24553, 134.55006, 1296, -208, 0, 0, 0, 0, -2, -3)
+}
+point_count = 9
+
+[node name="Grav_Walking_Test" type="Node2D" unique_id=2018522753]
+
+[node name="Platform" parent="." unique_id=1109584524 instance=ExtResource("1_ubtch")]
+position = Vector2(-189.99998, 13.000002)
+
+[node name="Grav_Test_player" parent="." unique_id=855718383 instance=ExtResource("2_welln")]
+position = Vector2(76, -44)
+
+[node name="Camera2D" type="Camera2D" parent="Grav_Test_player" unique_id=1950041495]
+position = Vector2(0, -64)
+
+[node name="StaticBody2D" type="StaticBody2D" parent="." unique_id=76716313]
+position = Vector2(-563.9999, 563.9999)
+scale = Vector2(37.659775, 37.659775)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D" unique_id=1679373982]
+position = Vector2(26.473866, -6.2666297)
+shape = SubResource("CircleShape2D_ubtch")
+
+[node name="Curved_terrain" type="Path2D" parent="." unique_id=903909106]
+position = Vector2(724, 0)
+curve = SubResource("Curve2D_n8avm")
+script = ExtResource("3_welln")
+metadata/_custom_type_script = "uid://cfs20w8fjteig"

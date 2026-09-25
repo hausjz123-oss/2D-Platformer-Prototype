@@ -75,6 +75,8 @@ texture = ExtResource("3_ard34")
 [sub_resource type="TileSet" id="TileSet_384fj"]
 sources/0 = SubResource("TileSetAtlasSource_fkd63")
 
+[sub_resource type="CircleShape2D" id="CircleShape2D_384fj"]
+
 [node name="MainScene" type="Node2D" unique_id=1290165605]
 
 [node name="TileMapLayer" type="TileMapLayer" parent="." unique_id=396709756]
@@ -119,3 +121,10 @@ Strength_Mode = 2
 position = Vector2(1161, 404)
 rotation = 4.712389
 Strength_Mode = 2
+
+[node name="StaticBody2D" type="StaticBody2D" parent="." unique_id=1092527505]
+position = Vector2(-563.9999, 563.9999)
+scale = Vector2(37.659775, 37.659775)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D" unique_id=75896370]
+shape = SubResource("CircleShape2D_384fj")
