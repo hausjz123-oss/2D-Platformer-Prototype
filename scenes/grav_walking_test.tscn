@@ -33,7 +33,21 @@ position = Vector2(26.473866, -6.2666297)
 shape = SubResource("CircleShape2D_ubtch")
 
 [node name="Curved_terrain" type="Path2D" parent="." unique_id=903909106]
-position = Vector2(724, 0)
+position = Vector2(713.00006, 6)
+scale = Vector2(0.6179411, 0.6403834)
 curve = SubResource("Curve2D_n8avm")
 script = ExtResource("3_welln")
 metadata/_custom_type_script = "uid://cfs20w8fjteig"
+
+[node name="StaticBody2D2" type="StaticBody2D" parent="." unique_id=732258849]
+position = Vector2(-2602, 606.00006)
+scale = Vector2(37.659775, 37.659775)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D2" unique_id=936103537]
+position = Vector2(26.473866, -6.2666297)
+shape = SubResource("CircleShape2D_ubtch")
+
+[node name="Air_flip_timer" type="Timer" parent="." unique_id=2059276694]
+wait_time = 0.2
+one_shot = true
+autostart = true

@@ -26,3 +26,6 @@ scale = Vector2(1.1040462, 3.625)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D" unique_id=1327216323]
 shape = SubResource("RectangleShape2D_384fj")
+
+[node name="RayCast2D" type="RayCast2D" parent="." unique_id=682464118]
+target_position = Vector2(0, 40)
