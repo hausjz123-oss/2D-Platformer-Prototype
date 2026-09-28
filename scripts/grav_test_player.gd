@@ -56,20 +56,13 @@ func _physics_process(delta: float) -> void:
 	
 	move_and_slide()
 	
-	if (get_last_slide_collision()):
-		if (!arr_wo_player.is_empty()):
-			rotation = Vector2.UP.angle_to(get_last_slide_collision().get_normal())
+	handle_physics_rotation(arr_wo_player)
 	
-	if(air_flip_timer):
-		if (air_flip_timer.time_left <= 0 and arr_wo_player.is_empty()):
-			rotation = 0
-		elif (!arr_wo_player.is_empty()):
-			air_flip_timer.start(0.2)
-	
+	# handle sprite rotation
 	icon_rotation = rotate_toward(icon_rotation, rotation, icon_rotation_speed*delta)
-	
 	icon.global_rotation = icon_rotation
-	
+
+
 func snap_to_track():
 	var snap_direction = Vector2.DOWN.rotated(rotation)
 	var snap_distance = 50.0
@@ -93,4 +86,15 @@ func snap_to_track():
 		# Remove velocity going away from / into the floor
 		# Keep only movement along the surface
 		velocity = velocity.slide(normal)
+
+
+func handle_physics_rotation(arr_wo_player : Array):
+	if (get_last_slide_collision()):
+		if (!arr_wo_player.is_empty()):
+			rotation = Vector2.UP.angle_to(get_last_slide_collision().get_normal())
 	
+	if (air_flip_timer):
+		if (air_flip_timer.time_left <= 0 and arr_wo_player.is_empty()):
+			rotation = 0
+		elif (!arr_wo_player.is_empty()):
+			air_flip_timer.start(0.2)

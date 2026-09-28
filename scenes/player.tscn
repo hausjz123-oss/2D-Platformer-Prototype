@@ -4,8 +4,6 @@
 [ext_resource type="Script" uid="uid://b7ufyr61lk115" path="res://scripts/player.gd" id="1_g2els"]
 [ext_resource type="Texture2D" uid="uid://ye3nq8dhpbbh" path="res://assets/SMM-NSMBU-MushroomPlatform.webp" id="3_qhqgy"]
 
-[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_384fj"]
-
 [sub_resource type="CircleShape2D" id="CircleShape2D_384fj"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_hlod6"]
@@ -21,13 +19,13 @@ animations = [{
 "speed": 5.0
 }]
 
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_384fj"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_qhqgy"]
+
 [node name="Player" type="CharacterBody2D" unique_id=1371040664 groups=["Players"]]
 script = ExtResource("1_g2els")
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1660034217]
-position = Vector2(0, -69)
-scale = Vector2(4.583552, 4.583552)
-shape = SubResource("CapsuleShape2D_384fj")
+sprite_rotation_speed = 5.0
 
 [node name="Hammer_Hurtbox" type="Area2D" parent="." unique_id=1026386652]
 position = Vector2(131, -164)
@@ -148,3 +146,19 @@ one_shot = true
 [node name="No_Grav_Time" type="Timer" parent="." unique_id=618538228]
 wait_time = 10.885
 one_shot = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1660034217]
+position = Vector2(0, -69)
+scale = Vector2(4.583552, 4.583552)
+shape = SubResource("CapsuleShape2D_384fj")
+
+[node name="Floor_detector" type="Area2D" parent="." unique_id=1389296821]
+scale = Vector2(1.1040462, 3.625)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Floor_detector" unique_id=248681545]
+shape = SubResource("RectangleShape2D_qhqgy")
+
+[node name="Air_Flip_Timer" type="Timer" parent="." unique_id=1444551536]
+wait_time = 0.2
+one_shot = true
+autostart = true

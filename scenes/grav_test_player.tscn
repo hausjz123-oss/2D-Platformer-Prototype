@@ -11,6 +11,7 @@ height = 20.486996
 
 [node name="Grav_Test_player" type="CharacterBody2D" unique_id=855718383]
 script = ExtResource("1_n5o70")
+icon_rotation_speed = 200.0
 
 [node name="Icon" type="Sprite2D" parent="." unique_id=795304166]
 position = Vector2(0, -64)

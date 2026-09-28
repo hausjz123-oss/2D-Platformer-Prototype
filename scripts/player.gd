@@ -1,13 +1,16 @@
 extends CharacterBody2D
 
 
-@export var max_walk_speed = 300.0
+@export var walk_max_speed = 300.0
+@export var walk_decerelation := 1800.0
+@export var walk_acceleration := 1800.0
 const JUMP_VELOCITY = -400.0
 var max_speed_h = 0
 var max_speed_v = 0
-@export var slide_speed_min = 500
 @export var spedometer_max_showable_h = 1500.0
 @export var spedometer_max_showable_v = 1500.0
+var sprite_rotation := 0.0
+@export var sprite_rotation_speed : float
 
 @onready var animated_sprite_2d: AnimatedSprite2D = $AnimatedSprite2D
 @onready var ray_cast_2d: RayCast2D = $RayCast2D
@@ -26,8 +29,19 @@ var max_speed_v = 0
 @onready var no_grav_time: Timer = $No_Grav_Time
 @onready var speed_limit_h_decay_timer: Timer = $Spedometer_H/Speed_Limit_H_Decay_Timer
 @onready var speed_limit_v_decay_timer: Timer = $Spedometer_V/Speed_Limit_V_Decay_Timer
+@onready var floor_detector: Area2D = $Floor_detector
+@onready var air_flip_timer: Timer = $Air_Flip_Timer
+var PDrotation : float
+var SHrotation : float
+var SVrotation : float
 
-func _process(delta: float) -> void:
+func _ready() -> void:
+	sprite_rotation = global_rotation
+	PDrotation = $Proximity_Detector.global_rotation
+	SHrotation = $Spedometer_H.global_rotation
+	SVrotation = $Spedometer_V.global_rotation
+
+func _process(_delta: float) -> void:	
 	# restart
 	if (Input.is_action_just_pressed("reload map")): get_tree().reload_current_scene()
 	# Raycast
@@ -44,32 +58,57 @@ func _process(delta: float) -> void:
 		hammer_cooldown.stop()
 
 func _physics_process(delta: float) -> void:
+	# update up_direction every tick
+	up_direction = Vector2.UP.rotated(rotation)
+	
+	# floor_detector colliders w/o self
+	var floor_coll_wo_self : Array[Node2D] = floor_detector.get_overlapping_bodies()
+	if(floor_coll_wo_self.has(self)):
+		floor_coll_wo_self.remove_at(floor_coll_wo_self.find(self))
+		
+	## Add the gravity.
+	#if (no_grav_time.is_stopped()):
+		#if not is_on_floor():
+			#velocity += get_gravity() * delta
+			
 	# Add the gravity.
-	if (no_grav_time.is_stopped()):
-		if not is_on_floor():
-			velocity += get_gravity() * delta
+	if (!floor_coll_wo_self.is_empty() and velocity.length() >= 200): 
+		if (Input.is_action_pressed("down")):
+			snap_to_track()
+		else:
+			velocity += get_gravity().rotated(rotation) *  delta
+	else:
+		velocity += Vector2.DOWN * get_gravity().length() * delta
 
+
+	## Handle jump.
+	#if Input.is_action_just_pressed("jump") and is_on_floor():
+		#velocity.y = JUMP_VELOCITY - abs(velocity.x)/5
 	# Handle jump.
 	if Input.is_action_just_pressed("jump") and is_on_floor():
-		velocity.y = JUMP_VELOCITY - abs(velocity.x)/5
+		velocity -= Vector2.UP.rotated(rotation)*JUMP_VELOCITY * (1.0+abs(velocity.x)/1000)
 
 	# Get the input direction and handle the movement/deceleration.
 	var direction := Input.get_axis("left", "right")
 	if direction:
-		# velocity.x = direction * SPEED
-		var v = max(max_walk_speed, max_speed_h)
-		var acceleration = 1800.0
-		velocity.x = move_toward(velocity.x, direction * v, acceleration * delta)
-		if (Input.is_action_pressed("down") and abs(velocity.x) >= slide_speed_min):
-				animated_sprite_2d.modulate = Color(1,1,0,1)
-		else: animated_sprite_2d.modulate = Color(1,1,1,1)
+		#TODO add secret slope down max speed increase and slope up speed decrease
+		var v = max(walk_max_speed, max_speed_h)
+		
+		#velocity.x = move_toward(velocity.x, 
+		#direction * v, 
+		#walk_acceleration * delta
+		#)
+		var horizontal_direction = up_direction.rotated(PI / 2.0)
+		velocity = velocity.move_toward(
+			velocity.project(up_direction) + horizontal_direction * direction * v,
+			walk_acceleration * delta
+		)
 	else:
-		if (is_on_floor()): # TODO: improve sliding visuals to actually work as intended
-			if (!Input.is_action_pressed("down") or abs(velocity.x) < slide_speed_min):
-				var deceleration = 1800.0
-				velocity.x = move_toward(velocity.x, 0, deceleration * delta)
-				animated_sprite_2d.modulate = Color(1,1,1,1)
-			else: animated_sprite_2d.modulate = Color(1,1,0,1)
+		if (is_on_floor()):
+			velocity = velocity.move_toward(
+				velocity.project(up_direction), 
+				walk_decerelation * delta
+			)
 	
 	# Hammer boosting
 	hammer_boosting_routine()
@@ -77,6 +116,17 @@ func _physics_process(delta: float) -> void:
 	handle_max_speed_decay(delta)
 	
 	move_and_slide()
+	print(floor_coll_wo_self.size())
+	handle_physics_rotation(floor_coll_wo_self)
+	
+	# handle sprite rotation
+	sprite_rotation = rotate_toward(sprite_rotation, rotation, sprite_rotation_speed*delta)
+	animated_sprite_2d.global_rotation = sprite_rotation
+	
+	# do not rotate UI
+	$Proximity_Detector.global_rotation = PDrotation
+	$Spedometer_H.global_rotation = SHrotation
+	$Spedometer_V.global_rotation = SVrotation
 
 func proximity_detector_routine():	
 	# TargetPoint Distance Calculation
@@ -188,3 +238,38 @@ func handle_max_speed_decay(delta):
 			abs(velocity.y),
 			V_decay_rate * delta
 		)
+
+func snap_to_track():
+	var snap_direction = Vector2.DOWN.rotated(rotation)
+	var snap_distance = 50.0
+
+	var collision = move_and_collide(
+		snap_direction * snap_distance,
+		true
+	)
+
+	if collision:
+		var normal = collision.get_normal()
+
+		# Actually move to the detected surface
+		global_position += collision.get_travel()
+
+		# Rotate to match the surface
+		var target_rotation = Vector2.UP.angle_to(normal)
+		rotation = target_rotation
+		up_direction = normal
+
+		# Remove velocity going away from / into the floor
+		# Keep only movement along the surface
+		velocity = velocity.slide(normal)
+
+func handle_physics_rotation(floor_coll_wo_self : Array):
+	if (get_last_slide_collision()):
+		if (!floor_coll_wo_self.is_empty()):
+			rotation = Vector2.UP.angle_to(get_last_slide_collision().get_normal())
+	
+	if (air_flip_timer):
+		if (air_flip_timer.time_left <= 0 and floor_coll_wo_self.is_empty()):
+			rotation = 0
+		elif (!floor_coll_wo_self.is_empty()):
+			air_flip_timer.start(0.2)
