@@ -9,8 +9,9 @@ var max_speed_h = 0
 var max_speed_v = 0
 @export var spedometer_max_showable_h = 1500.0
 @export var spedometer_max_showable_v = 1500.0
-var sprite_rotation := 0.0
+var sprite_rotation := 5.0
 @export var sprite_rotation_speed : float
+@export var terminal_velocity := 1500.0
 
 @onready var animated_sprite_2d: AnimatedSprite2D = $AnimatedSprite2D
 @onready var ray_cast_2d: RayCast2D = $RayCast2D
@@ -34,6 +35,7 @@ var sprite_rotation := 0.0
 var PDrotation : float
 var SHrotation : float
 var SVrotation : float
+var floor_normal := Vector2.UP
 
 func _ready() -> void:
 	sprite_rotation = global_rotation
@@ -58,6 +60,7 @@ func _process(_delta: float) -> void:
 		hammer_cooldown.stop()
 
 func _physics_process(delta: float) -> void:
+	print(get_slide_collision_count())
 	# update up_direction every tick
 	up_direction = Vector2.UP.rotated(rotation)
 	
@@ -90,17 +93,24 @@ func _physics_process(delta: float) -> void:
 
 	# Get the input direction and handle the movement/deceleration.
 	var direction := Input.get_axis("left", "right")
+	var horizontal_direction = up_direction.rotated(PI / 2.0)
+	var movement_direction = horizontal_direction * direction
+	
 	if direction:
-		#TODO add secret slope down max speed increase and slope up speed decrease
-		var v = max(walk_max_speed, max_speed_h)
+		# down slope max speed is = terminal velocity
+		# (up slopes shouldn't affect speed)
+		var down_slope_max_speed = 0.0
+		var slope_angle = abs(Vector2.DOWN.angle_to(movement_direction))
 		
-		#velocity.x = move_toward(velocity.x, 
-		#direction * v, 
-		#walk_acceleration * delta
-		#)
-		var horizontal_direction = up_direction.rotated(PI / 2.0)
+		if  slope_angle < PI/2:
+			# PI/2 = walk_max_speed
+			# 0 = terminal_velocity
+			down_slope_max_speed = remap(slope_angle, PI/2, 0, walk_max_speed, terminal_velocity)
+		var v = max(walk_max_speed, max_speed_h, down_slope_max_speed)
+		
 		velocity = velocity.move_toward(
-			velocity.project(up_direction) + horizontal_direction * direction * v,
+			velocity.project(up_direction) 
+			+ movement_direction * v,
 			walk_acceleration * delta
 		)
 	else:
@@ -116,7 +126,7 @@ func _physics_process(delta: float) -> void:
 	handle_max_speed_decay(delta)
 	
 	move_and_slide()
-	print(floor_coll_wo_self.size())
+	
 	handle_physics_rotation(floor_coll_wo_self)
 	
 	# handle sprite rotation
@@ -264,12 +274,31 @@ func snap_to_track():
 		velocity = velocity.slide(normal)
 
 func handle_physics_rotation(floor_coll_wo_self : Array):
-	if (get_last_slide_collision()):
-		if (!floor_coll_wo_self.is_empty()):
-			rotation = Vector2.UP.angle_to(get_last_slide_collision().get_normal())
+	if get_slide_collision_count() > 0 and !floor_coll_wo_self.is_empty():
+		floor_normal = get_average_floor_normal()
+		rotation = Vector2.UP.angle_to(floor_normal)
 	
 	if (air_flip_timer):
 		if (air_flip_timer.time_left <= 0 and floor_coll_wo_self.is_empty()):
 			rotation = 0
+			floor_normal = Vector2.UP
 		elif (!floor_coll_wo_self.is_empty()):
 			air_flip_timer.start(0.2)
+
+func get_average_floor_normal() -> Vector2:
+	var total_normal = Vector2.ZERO
+	var count = 0
+
+	for i in get_slide_collision_count():
+		var collision = get_slide_collision(i)
+		var normal = collision.get_normal()
+
+		# Only normals reasonably related to our current floor
+		if normal.dot(up_direction) > 0.0:
+			total_normal += normal
+			count += 1
+
+	if count > 0:
+		return (total_normal / count).normalized()
+
+	return floor_normal
