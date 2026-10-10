@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/name="2D B Platformer"
+config/name="2D Platformer Prototype"
 run/main_scene="uid://c7hirg72xkqlv"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
@@ -27,6 +27,7 @@ project/assembly_name="2D B Platformer"
 [global_group]
 
 Players="The playable player characters"
+curved_track=""
 
 [input]
 
