@@ -1,0 +1,2 @@
+1. player and collisions player collides with
+2. Collisions player does not collide with

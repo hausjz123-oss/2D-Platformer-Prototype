@@ -27,6 +27,7 @@ project/assembly_name="2D B Platformer"
 [global_group]
 
 Players="The playable player characters"
+curved_track=""
 
 [input]
 

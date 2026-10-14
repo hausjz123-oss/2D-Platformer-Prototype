@@ -6,11 +6,16 @@ extends Path2D
 @export var center_texture : Texture2D
 @export var visible_collision : bool = true
 
+# Put generated curved-terrain collision on layer 2.
+@export_flags_2d_physics var generated_collision_layer: int = 2
+
 var polygon2d : Polygon2D
 var line2d : Line2D
 var collision_polygon2d : CollisionPolygon2D
 
 func _ready() -> void:
+	add_to_group("curved_track")
+	
 	polygon2d = Polygon2D.new()
 	polygon2d.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	add_child(polygon2d)
@@ -21,7 +26,9 @@ func _ready() -> void:
 	add_child(line2d)
 	
 	var collision_staticbody : StaticBody2D = StaticBody2D.new()
+	collision_staticbody.collision_layer = generated_collision_layer
 	add_child(collision_staticbody)
+	
 	collision_polygon2d = CollisionPolygon2D.new()
 	collision_staticbody.add_child(collision_polygon2d)
 	

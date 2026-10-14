@@ -4,7 +4,16 @@ extends CharacterBody2D
 @export var walk_max_speed = 300.0
 @export var walk_decerelation := 1800.0
 @export var walk_acceleration := 1800.0
-const JUMP_VELOCITY = -400.0
+@export var uphill_speed_reduction := 0.20 # relative (from 0.0 to 1.0)
+
+@export var track_contact_distance := 12.0
+@export var track_follow_distance := 25.0
+@export var track_snap_distance := 60.0
+@export var track_release_distance := 1.5
+var current_track: Curved_terrain = null
+var floor_normal := Vector2.UP
+
+@export var jump_speed := 400.0
 var max_speed_h = 0
 var max_speed_v = 0
 @export var spedometer_max_showable_h = 1500.0
@@ -35,7 +44,6 @@ var sprite_rotation := 5.0
 var PDrotation : float
 var SHrotation : float
 var SVrotation : float
-var floor_normal := Vector2.UP
 
 func _ready() -> void:
 	sprite_rotation = global_rotation
@@ -84,12 +92,9 @@ func _physics_process(delta: float) -> void:
 		velocity += Vector2.DOWN * get_gravity().length() * delta
 
 
-	## Handle jump.
-	#if Input.is_action_just_pressed("jump") and is_on_floor():
-		#velocity.y = JUMP_VELOCITY - abs(velocity.x)/5
 	# Handle jump.
 	if Input.is_action_just_pressed("jump") and is_on_floor():
-		velocity -= Vector2.UP.rotated(rotation)*JUMP_VELOCITY * (1.0+abs(velocity.x)/1000)
+		velocity += Vector2.UP.rotated(rotation)*jump_speed * (1.0+abs(velocity.x)/1000)
 
 	# Get the input direction and handle the movement/deceleration.
 	var direction := Input.get_axis("left", "right")
@@ -302,3 +307,161 @@ func get_average_floor_normal() -> Vector2:
 		return (total_normal / count).normalized()
 
 	return floor_normal
+
+func sample_track(
+	track: Curved_terrain,
+	world_position: Vector2,
+	preferred_normal := Vector2.ZERO
+ ) -> Dictionary:
+
+	if track == null or track.curve == null:
+		return {}
+
+	if track.curve.get_baked_length() <= 0.0:
+		return {}
+
+	var local_position = track.to_local(world_position)
+
+	var offset = track.curve.get_closest_offset(local_position)
+
+	var track_transform = track.curve.sample_baked_with_rotation(
+		offset,
+		true
+	)
+
+	var local_track_point = track_transform.origin
+	var global_track_point = track.to_global(local_track_point)
+
+	# sample_baked_with_rotation().x is the local tangent.
+	var local_tangent = track_transform.x.normalized()
+
+	var global_tangent = (
+		track.to_global(local_track_point + local_tangent)
+		- global_track_point
+	).normalized()
+
+	if global_tangent == Vector2.ZERO:
+		return {}
+
+	var normal = global_tangent.rotated(-PI / 2.0).normalized()
+
+	# When already following a track, maintain the same side of it.
+	if preferred_normal != Vector2.ZERO:
+		if normal.dot(preferred_normal) < 0.0:
+			normal = -normal
+
+	# When first finding a track, choose the side facing the player.
+	else:
+		var toward_player = world_position - global_track_point
+
+		if toward_player.length_squared() > 0.001:
+			if normal.dot(toward_player) < 0.0:
+				normal = -normal
+		elif normal.dot(floor_normal) < 0.0:
+			normal = -normal
+
+	return {
+		"track": track,
+		"offset": offset,
+		"point": global_track_point,
+		"tangent": global_tangent,
+		"normal": normal,
+		"distance": world_position.distance_to(global_track_point)
+	}
+	
+func find_nearest_track(
+	world_position: Vector2,
+	max_distance: float
+ ) -> Dictionary:
+
+	var best_sample := {}
+	var best_distance := max_distance
+
+	for node in get_tree().get_nodes_in_group("curved_track"):
+		if !(node is Curved_terrain):
+			continue
+
+		var sample = sample_track(node, world_position)
+
+		if sample.is_empty():
+			continue
+
+		var distance: float = sample["distance"]
+
+		if distance <= best_distance:
+			best_distance = distance
+			best_sample = sample
+
+	return best_sample
+
+func try_attach_to_track(force_snap: bool) -> void:
+	if current_track != null:
+		return
+
+	var search_distance = (
+		track_snap_distance
+		if force_snap
+		else track_contact_distance
+	)
+
+	var sample = find_nearest_track(
+		global_position,
+		search_distance
+	)
+
+	if sample.is_empty():
+		return
+
+	var normal: Vector2 = sample["normal"]
+
+	# Holding down means magnetically grab the track.
+	#
+	# Otherwise only attach if:
+	# - we're basically stationary, or
+	# - we're moving toward the track.
+	var can_attach = (
+		force_snap
+		or velocity.length() < 20.0
+		or velocity.dot(normal) < 0.0
+	)
+
+	if !can_attach:
+		return
+
+	current_track = sample["track"]
+	floor_normal = normal
+
+	global_position = sample["point"]
+
+	var surface_right = floor_normal.rotated(PI / 2.0)
+
+	velocity = velocity.project(surface_right)
+
+	up_direction = floor_normal
+	rotation = Vector2.UP.angle_to(floor_normal)
+
+func get_surface_right() -> Vector2:
+	return floor_normal.rotated(PI / 2.0)
+
+func get_walk_target_speed(direction: float) -> float:
+	var movement_direction = (get_surface_right() * direction).normalized()
+
+	# +1 = straight downhill
+	#  0 = flat
+	# -1 = straight uphill
+	var downhill_amount = movement_direction.dot(Vector2.DOWN)
+
+	if downhill_amount >= 0.0:
+		return lerp(
+			walk_max_speed,
+			terminal_velocity,
+			downhill_amount
+		)
+
+	var steepness = -downhill_amount
+
+	return lerp(
+		walk_max_speed,
+		walk_max_speed * (1.0 - uphill_speed_reduction),
+		steepness
+	)
