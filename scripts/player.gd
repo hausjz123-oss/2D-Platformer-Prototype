@@ -4,14 +4,31 @@ extends CharacterBody2D
 @export var walk_max_speed = 300.0
 @export var walk_decerelation := 1800.0
 @export var walk_acceleration := 1800.0
-@export var uphill_speed_reduction := 0.20 # relative (from 0.0 to 1.0)
+@export var uphill_speed_reduction := 0.00 # relative (from 0.0 to 1.0)
+@export var running_jump_speed_divisor := 1000.0
 
 @export var track_contact_distance := 12.0
-@export var track_follow_distance := 25.0
 @export var track_snap_distance := 60.0
-@export var track_release_distance := 1.5
+#TODO: make it so the Floor_detector's size automatically gets scaled to 
+#	   the same length as track_snap_distance
+@export var track_transition_distance := 20.0
 var current_track: Curved_terrain = null
+var current_track_offset := 0.0
+var nearby_tracks: Array[Curved_terrain] = []
 var floor_normal := Vector2.UP
+var track_tangent := Vector2.RIGHT
+# Positive velocity along the outward normal required
+# to naturally launch away from the track.
+@export var track_detach_normal_speed := 100.0
+# Traction:
+@export var traction_start_angle_degrees := 45.0
+@export var traction_min_speed := 200.0
+# Collision layer NUMBER used by Curved_terrain polygons.
+@export_range(1, 32, 1) var curved_terrain_collision_layer := 2
+
+# Useful later if we want impact/ramp rewards.
+# Negative = we slammed INTO the terrain.
+var last_track_impact_normal_speed := 0.0
 
 @export var jump_speed := 400.0
 var max_speed_h = 0
@@ -19,7 +36,7 @@ var max_speed_v = 0
 @export var spedometer_max_showable_h = 1500.0
 @export var spedometer_max_showable_v = 1500.0
 var sprite_rotation := 5.0
-@export var sprite_rotation_speed : float
+@export var sprite_rotation_speed := 10.0
 @export var terminal_velocity := 1500.0
 
 @onready var animated_sprite_2d: AnimatedSprite2D = $AnimatedSprite2D
@@ -45,6 +62,8 @@ var PDrotation : float
 var SHrotation : float
 var SVrotation : float
 
+
+
 func _ready() -> void:
 	sprite_rotation = global_rotation
 	PDrotation = $Proximity_Detector.global_rotation
@@ -55,7 +74,11 @@ func _process(_delta: float) -> void:
 	# restart
 	if (Input.is_action_just_pressed("reload map")): get_tree().reload_current_scene()
 	# Raycast
-	ray_cast_2d.rotation = collision_shape_2d.global_position.direction_to(get_global_mouse_position()).angle()
+	ray_cast_2d.global_rotation = (
+	ray_cast_2d.global_position
+	.direction_to(get_global_mouse_position())
+	.angle()
+)
 	
 	# Proximity_Detector
 	proximity_detector_routine() # TODO improve proximity detector, because it's very useless right now
@@ -68,77 +91,68 @@ func _process(_delta: float) -> void:
 		hammer_cooldown.stop()
 
 func _physics_process(delta: float) -> void:
-	print(get_slide_collision_count())
-	# update up_direction every tick
-	up_direction = Vector2.UP.rotated(rotation)
+	var force_snap = Input.is_action_pressed("down")
 	
-	# floor_detector colliders w/o self
-	var floor_coll_wo_self : Array[Node2D] = floor_detector.get_overlapping_bodies()
-	if(floor_coll_wo_self.has(self)):
-		floor_coll_wo_self.remove_at(floor_coll_wo_self.find(self))
-		
-	## Add the gravity.
-	#if (no_grav_time.is_stopped()):
-		#if not is_on_floor():
-			#velocity += get_gravity() * delta
-			
-	# Add the gravity.
-	if (!floor_coll_wo_self.is_empty() and velocity.length() >= 200): 
-		if (Input.is_action_pressed("down")):
-			snap_to_track()
-		else:
-			velocity += get_gravity().rotated(rotation) *  delta
-	else:
-		velocity += Vector2.DOWN * get_gravity().length() * delta
+	# Find mathematical track if one is nearby.
+	try_attach_to_track(force_snap)
 
-
-	# Handle jump.
-	if Input.is_action_just_pressed("jump") and is_on_floor():
-		velocity += Vector2.UP.rotated(rotation)*jump_speed * (1.0+abs(velocity.x)/1000)
-
-	# Get the input direction and handle the movement/deceleration.
-	var direction := Input.get_axis("left", "right")
-	var horizontal_direction = up_direction.rotated(PI / 2.0)
-	var movement_direction = horizontal_direction * direction
-	
-	if direction:
-		# down slope max speed is = terminal velocity
-		# (up slopes shouldn't affect speed)
-		var down_slope_max_speed = 0.0
-		var slope_angle = abs(Vector2.DOWN.angle_to(movement_direction))
-		
-		if  slope_angle < PI/2:
-			# PI/2 = walk_max_speed
-			# 0 = terminal_velocity
-			down_slope_max_speed = remap(slope_angle, PI/2, 0, walk_max_speed, terminal_velocity)
-		var v = max(walk_max_speed, max_speed_h, down_slope_max_speed)
-		
-		velocity = velocity.move_toward(
-			velocity.project(up_direction) 
-			+ movement_direction * v,
-			walk_acceleration * delta
+	# UPDATE CURRENT TRACK ORIENTATION
+	if current_track != null:
+		var sample = sample_track(
+			current_track,
+			global_position,
+			floor_normal
 		)
-	else:
-		if (is_on_floor()):
-			velocity = velocity.move_toward(
-				velocity.project(up_direction), 
-				walk_decerelation * delta
+
+		if !sample.is_empty():
+			floor_normal = sample["normal"]
+			up_direction = floor_normal
+
+			rotation = Vector2.UP.angle_to(
+				floor_normal
 			)
+			
+	# GRAVITY
+	if no_grav_time.is_stopped():
+		velocity += (
+			Vector2.DOWN
+			* get_gravity().length()
+			* delta
+		)
 	
-	# Hammer boosting
+	# JUMP
+	handle_jump()
+
+	# WALKING
+	handle_walking(delta)
+	
+	# HAMMER
 	hammer_boosting_routine()
 	
-	handle_max_speed_decay(delta)
-	
+	# handle physics rotation
+	handle_physics_rotation()
+
+	# NORMAL GODOT MOVE
 	move_and_slide()
 	
-	handle_physics_rotation(floor_coll_wo_self)
-	
-	# handle sprite rotation
-	sprite_rotation = rotate_toward(sprite_rotation, rotation, sprite_rotation_speed*delta)
+	# MATHEMATICAL TRACK
+	if current_track != null:
+		update_track_attachment(force_snap)
+	else:
+		handle_fallback_rotation()
+
+	# SPEED LIMIT DATA
+	handle_max_speed_decay(delta)
+
+	# VISUAL ROTATION
+	sprite_rotation = rotate_toward(
+		sprite_rotation,
+		global_rotation,
+		sprite_rotation_speed * delta
+	)
 	animated_sprite_2d.global_rotation = sprite_rotation
 	
-	# do not rotate UI
+	# DO NOT ROTATE UI
 	$Proximity_Detector.global_rotation = PDrotation
 	$Spedometer_H.global_rotation = SHrotation
 	$Spedometer_V.global_rotation = SVrotation
@@ -254,41 +268,14 @@ func handle_max_speed_decay(delta):
 			V_decay_rate * delta
 		)
 
-func snap_to_track():
-	var snap_direction = Vector2.DOWN.rotated(rotation)
-	var snap_distance = 50.0
-
-	var collision = move_and_collide(
-		snap_direction * snap_distance,
-		true
-	)
-
-	if collision:
-		var normal = collision.get_normal()
-
-		# Actually move to the detected surface
-		global_position += collision.get_travel()
-
-		# Rotate to match the surface
-		var target_rotation = Vector2.UP.angle_to(normal)
-		rotation = target_rotation
-		up_direction = normal
-
-		# Remove velocity going away from / into the floor
-		# Keep only movement along the surface
-		velocity = velocity.slide(normal)
-
-func handle_physics_rotation(floor_coll_wo_self : Array):
-	if get_slide_collision_count() > 0 and !floor_coll_wo_self.is_empty():
-		floor_normal = get_average_floor_normal()
-		rotation = Vector2.UP.angle_to(floor_normal)
-	
-	if (air_flip_timer):
-		if (air_flip_timer.time_left <= 0 and floor_coll_wo_self.is_empty()):
-			rotation = 0
-			floor_normal = Vector2.UP
-		elif (!floor_coll_wo_self.is_empty()):
-			air_flip_timer.start(0.2)
+func handle_physics_rotation():
+	if (air_flip_timer.time_left <= 0 and current_track == null):
+		rotation = 0
+		floor_normal = Vector2.UP
+		up_direction = Vector2.UP
+		
+	elif (current_track != null):
+		air_flip_timer.start(0.2)
 
 func get_average_floor_normal() -> Vector2:
 	var total_normal = Vector2.ZERO
@@ -368,7 +355,7 @@ func sample_track(
 		"normal": normal,
 		"distance": world_position.distance_to(global_track_point)
 	}
-	
+
 func find_nearest_track(
 	world_position: Vector2,
 	max_distance: float
@@ -465,3 +452,175 @@ func get_walk_target_speed(direction: float) -> float:
 		walk_max_speed * (1.0 - uphill_speed_reduction),
 		steepness
 	)
+
+func handle_walking(delta: float) -> void:
+	var direction := Input.get_axis("left", "right")
+
+	if current_track != null:
+		var surface_right = get_surface_right()
+
+		var tangent_speed = velocity.dot(surface_right)
+		var normal_speed = velocity.dot(floor_normal)
+
+		if direction:
+			var target_speed = get_walk_target_speed(direction)
+
+			# Don't destroy existing momentum just because normal walking
+			# has a lower maximum.
+			if (
+				sign(tangent_speed) == sign(direction)
+				and abs(tangent_speed) > target_speed
+			):
+				target_speed = abs(tangent_speed)
+
+			tangent_speed = move_toward(
+				tangent_speed,
+				direction * target_speed,
+				walk_acceleration * delta
+			)
+
+		else:
+			tangent_speed = move_toward(
+				tangent_speed,
+				0.0,
+				walk_decerelation * delta
+			)
+		# TODO: what if walk acceleration is slower than walk decelleration? 
+		# Then it would be best to hold neutral until standstill before holding the 
+		# other direction to go faster. 
+		# That sounds like bad tech and could be changed so walk decelleration is used when 
+		# switching directions first until standstill and then accelerating 
+		# into that new direction.
+
+		velocity = (
+			surface_right * tangent_speed
+			+ floor_normal * normal_speed
+		)
+
+		return
+
+	# ----------------------------
+	# FALLBACK: ordinary terrain
+	# ----------------------------
+
+	if direction:
+		velocity.x = move_toward(
+			velocity.x,
+			direction * walk_max_speed,
+			walk_acceleration * delta
+		)
+
+	elif is_on_floor():
+		velocity.x = move_toward(
+			velocity.x,
+			0.0,
+			walk_decerelation * delta
+		)
+
+func handle_jump() -> void:
+	if !Input.is_action_just_pressed("jump"):
+		return
+
+	if current_track != null:
+		var surface_right = get_surface_right()
+
+		var tangent_speed = abs(
+			velocity.dot(surface_right)
+		)
+
+		velocity += floor_normal * jump_speed * (
+			1.0 + tangent_speed / running_jump_speed_divisor
+		)
+
+		current_track = null
+		return
+
+	# Ordinary non-Curve2D fallback
+	if is_on_floor():
+		velocity.y = -jump_speed * (1.0 + velocity.x / running_jump_speed_divisor)
+
+func update_track_attachment(force_snap: bool) -> void:
+	if current_track == null:
+		return
+
+	var sample = sample_track(
+		current_track,
+		global_position,
+		floor_normal
+	)
+
+	if sample.is_empty():
+		current_track = null
+		return
+
+	var track_point: Vector2 = sample["point"]
+	var normal: Vector2 = sample["normal"]
+	var distance: float = sample["distance"]
+
+	# TODO: mathematically, how does dot give us what we desire?
+	var normal_distance = (
+		global_position - track_point
+	).dot(normal)
+
+	if force_snap:
+		# Holding down: actively stick to the terrain.
+		if distance > track_snap_distance:
+			current_track = null
+			return
+
+	else:
+		# No magnetic sticking.
+		#
+		# If our natural motion takes us outward far enough,
+		# release the track and let the player fly.
+		if (
+			# TODO: what's the point of having these 2 things if same?
+			distance > track_follow_distance
+			or normal_distance > track_release_distance
+		):
+			current_track = null
+			return
+
+	# We are still constrained to this track.
+	global_position = track_point
+
+	floor_normal = normal
+	up_direction = normal
+
+	rotation = Vector2.UP.angle_to(normal)
+
+	# Keep only velocity along the track.
+	var surface_right = get_surface_right()
+	velocity = velocity.project(surface_right)
+
+func handle_fallback_rotation() -> void:
+	if get_slide_collision_count() > 0:
+		var normal = get_average_floor_normal()
+
+		if normal != Vector2.ZERO:
+			floor_normal = normal
+			up_direction = normal
+			rotation = Vector2.UP.angle_to(normal)
+
+	else:
+		floor_normal = Vector2.UP
+		up_direction = Vector2.UP
+
+func refresh_nearby_tracks() -> void:
+	nearby_tracks.clear()
+
+	for body in floor_detector.get_overlapping_bodies():
+		if body == self:
+			continue
+
+		var node: Node = body
+		#TODO: isn't this dumb and needlessly expensive?
+		# Generated StaticBody2D is a child of Curved_terrain.
+		while node != null and !(node is Curved_terrain):
+			node = node.get_parent()
+
+		if node is Curved_terrain:
+			var track := node as Curved_terrain
+
+			if !nearby_tracks.has(track):
+				nearby_tracks.append(track)

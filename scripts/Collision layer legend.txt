@@ -1,2 +1,4 @@
 1. player and collisions player collides with
-2. Collisions player does not collide with
+
+2. Collisions (like curved_terrain's polygon2Ds) that the player does not collide 
+with when walking on track
