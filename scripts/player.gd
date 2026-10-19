@@ -78,7 +78,7 @@ func _process(_delta: float) -> void:
 	ray_cast_2d.global_position
 	.direction_to(get_global_mouse_position())
 	.angle()
- )
+)
 	
 	# Proximity_Detector
 	proximity_detector_routine() # TODO improve proximity detector, because it's very useless right now
@@ -87,137 +87,72 @@ func _process(_delta: float) -> void:
 	spedometers_routines()
 	
 	# some hammer cooldown code
-	if (
-		current_track != null
-		or is_on_floor()
-		or is_on_ceiling()
-		or is_on_wall()
-	 ):
-		if hammer_cooldown.time_left > 0:
-			hammer_cooldown.stop()
+	if ((is_on_floor() or is_on_ceiling() or is_on_wall()) and hammer_cooldown.time_left > 0): 
+		hammer_cooldown.stop()
 
 func _physics_process(delta: float) -> void:
-	var force_snap := Input.is_action_pressed("down")
-
-
-	# Needed for transitions between nearby tracks.
-	# TODO dude... we do this EVERY tick?!?!?!?! wasteful, why not only when tracks nearby or something?
-	#      surely there's a cheaper way...
-	refresh_nearby_tracks()
-
-
-	# ====================================================
-	# ATTACHED TO CURVED TERRAIN
-	# ====================================================
-
-	if current_track != null:
-
-		var sample := sample_track_at_offset(
-			current_track,
-			current_track_offset
-		)
-
-		if sample.is_empty():
-			detach_from_track()
-
-		else:
-			apply_track_sample(sample)
-
-
-	# ====================================================
-	# TRACK STATE
-	# ====================================================
-
-	if current_track != null:
-		
-		# TODO wait so we just put hammer_boosting routine here also? 
-		#      This code is so difficult to keep track of
-		hammer_boosting_routine()
-
-
-		# Hammer / external force may already be trying
-		# to launch us outward.
-		if (
-			!force_snap
-			and velocity.dot(floor_normal)
-				> track_detach_normal_speed
-		):
-			detach_from_track()
-
-			move_and_slide()
-
-			handle_fallback_rotation()
-
-		# TODO why do we handle jumping off tracks so unintuitively in the code? 
-		#      isn't there any better way?
-		elif handle_track_jump():
-			move_and_slide()
-
-			handle_fallback_rotation()
-
-
-		else:
-			handle_track_movement(
-				delta,
-				# TODO WHY IS force_snap ALSO HERE? DIDN'T WE ALREADY CHECK FOR IT?!?!?!
-				# TODO: Why does so much code feel unnecessary and like it's all doing the same thing...
-				force_snap
-			)
-
-			# Traction loss / ramp launch / track end
-			# might have detached us.
-			if current_track == null:
-				move_and_slide()
-
-				handle_fallback_rotation()
-
-
-	# ====================================================
-	# FREE STATE
-	# ====================================================
+	var force_snap = Input.is_action_pressed("down")
 	
-	# TODO look at how simpel and clean the free sate is handeled! 
-	#      why would track movement be unnecessarily complicated?
-	else:
-		handle_free_state(
-			delta,
-			force_snap
+	# Find mathematical track if one is nearby.
+	try_attach_to_track(force_snap)
+
+	# UPDATE CURRENT TRACK ORIENTATION
+	if current_track != null:
+		var sample = sample_track(
+			current_track,
+			global_position,
+			floor_normal
 		)
 
+		if !sample.is_empty():
+			floor_normal = sample["normal"]
+			up_direction = floor_normal
 
-	# ====================================================
-	# BODY ROTATION
-	# ====================================================
+			rotation = Vector2.UP.angle_to(
+				floor_normal
+			)
+			
+	# GRAVITY
+	if no_grav_time.is_stopped():
+		velocity += (
+			Vector2.DOWN
+			* get_gravity().length()
+			* delta
+		)
+	
+	# JUMP
+	handle_jump()
 
+	# WALKING
+	handle_walking(delta)
+	
+	# HAMMER
+	hammer_boosting_routine()
+	
+	# handle physics rotation
 	handle_physics_rotation()
 
+	# NORMAL GODOT MOVE
+	move_and_slide()
+	
+	# MATHEMATICAL TRACK
+	if current_track != null:
+		update_track_attachment(force_snap)
+	else:
+		handle_fallback_rotation()
 
-	# ====================================================
-	# PRESERVED SPEED LIMITS
-	# ====================================================
-
+	# SPEED LIMIT DATA
 	handle_max_speed_decay(delta)
 
-
-	# ====================================================
 	# VISUAL ROTATION
-	# ====================================================
-
 	sprite_rotation = rotate_toward(
 		sprite_rotation,
 		global_rotation,
 		sprite_rotation_speed * delta
 	)
-
-	animated_sprite_2d.global_rotation = (
-		sprite_rotation
-	)
-
-
-	# ====================================================
-	# UI SHOULD NOT ROTATE
-	# ====================================================
-
+	animated_sprite_2d.global_rotation = sprite_rotation
+	
+	# DO NOT ROTATE UI
 	$Proximity_Detector.global_rotation = PDrotation
 	$Spedometer_H.global_rotation = SHrotation
 	$Spedometer_V.global_rotation = SVrotation
@@ -360,105 +295,80 @@ func get_average_floor_normal() -> Vector2:
 
 	return floor_normal
 
-func sample_track_at_offset(
+func sample_track(
 	track: Curved_terrain,
-	offset: float
+	world_position: Vector2,
+	preferred_normal := Vector2.ZERO
  ) -> Dictionary:
 
 	if track == null or track.curve == null:
 		return {}
 
-	# TODO: isn't there a memory cheaper way of getting this same job done differently?
-	var length := track.curve.get_baked_length()
-
-	if length <= 0.0:
+	if track.curve.get_baked_length() <= 0.0:
 		return {}
 
-	offset = clamp(offset, 0.0, length)
+	var local_position = track.to_local(world_position)
 
-	var track_transform := (
-		track.curve.sample_baked_with_rotation(
-			offset,
-			true #TODO: could set to false (for performance), cuz linear might be good enough 
-		)
+	var offset = track.curve.get_closest_offset(local_position)
+
+	var track_transform = track.curve.sample_baked_with_rotation(
+		offset,
+		true
 	)
 
-	var local_point := track_transform.origin
-	var global_point := track.to_global(local_point)
+	var local_track_point = track_transform.origin
+	var global_track_point = track.to_global(local_track_point)
 
-	var local_tangent := track_transform.x.normalized()
+	# sample_baked_with_rotation().x is the local tangent.
+	var local_tangent = track_transform.x.normalized()
 
-	var global_tangent := (
-		track.to_global(local_point + local_tangent)
-		- global_point
+	var global_tangent = (
+		track.to_global(local_track_point + local_tangent)
+		- global_track_point
 	).normalized()
 
 	if global_tangent == Vector2.ZERO:
 		return {}
 
-	var local_normal := track.get_outward_normal_local(
-		local_point,
-		local_tangent
-	)
+	var normal = global_tangent.rotated(-PI / 2.0).normalized()
 
-	var global_normal := (
-		track.to_global(local_point + local_normal)
-		- global_point
-	).normalized()
+	# When already following a track, maintain the same side of it.
+	if preferred_normal != Vector2.ZERO:
+		if normal.dot(preferred_normal) < 0.0:
+			normal = -normal
+
+	# When first finding a track, choose the side facing the player.
+	else:
+		var toward_player = world_position - global_track_point
+
+		if toward_player.length_squared() > 0.001:
+			if normal.dot(toward_player) < 0.0:
+				normal = -normal
+		elif normal.dot(floor_normal) < 0.0:
+			normal = -normal
 
 	return {
 		"track": track,
 		"offset": offset,
-		"point": global_point,
+		"point": global_track_point,
 		"tangent": global_tangent,
-		"normal": global_normal
+		"normal": normal,
+		"distance": world_position.distance_to(global_track_point)
 	}
-
-func sample_closest_track_point(
-	track: Curved_terrain,
-	world_position: Vector2
-) -> Dictionary:
-
-	if track == null or track.curve == null:
-		return {}
-
-	var local_position := track.to_local(world_position)
-
-	var offset := track.curve.get_closest_offset(
-		local_position
-	)
-
-	var sample := sample_track_at_offset(
-		track,
-		offset
-	)
-
-	if sample.is_empty():
-		return {}
-
-	sample["distance"] = world_position.distance_to(
-		sample["point"]
-	)
-
-	return sample
 
 func find_nearest_track(
 	world_position: Vector2,
-	max_distance: float,
-	excluded_track: Curved_terrain = null
-) -> Dictionary:
+	max_distance: float
+ ) -> Dictionary:
 
 	var best_sample := {}
 	var best_distance := max_distance
 
-	for track in nearby_tracks:
-		if track == excluded_track:
+	for node in get_tree().get_nodes_in_group("curved_track"):
+		if !(node is Curved_terrain):
 			continue
 
-		var sample := sample_closest_track_point(
-			track,
-			world_position
-		)
+		var sample = sample_track(node, world_position)
 
 		if sample.is_empty():
 			continue
@@ -471,21 +381,17 @@ func find_nearest_track(
 
 	return best_sample
 
-func try_attach_to_track(
-	force_snap: bool,
-	approach_velocity: Vector2
-) -> void:
-
+func try_attach_to_track(force_snap: bool) -> void:
 	if current_track != null:
 		return
 
-	var search_distance := (
+	var search_distance = (
 		track_snap_distance
 		if force_snap
 		else track_contact_distance
 	)
 
-	var sample := find_nearest_track(
+	var sample = find_nearest_track(
 		global_position,
 		search_distance
 	)
@@ -494,97 +400,57 @@ func try_attach_to_track(
 		return
 
 	var normal: Vector2 = sample["normal"]
-	var tangent: Vector2 = sample["tangent"]
 
-	last_track_impact_normal_speed = (
-		approach_velocity.dot(normal)
-	)
-
-
-	# ----------------------
-	# TRACTION REQUIREMENT
-	# ----------------------
-
-	if !force_snap:
-		var steepness : float = abs(
-			rad_to_deg(
-				Vector2.UP.angle_to(normal)
-			)
-		)
-
-		var incoming_track_speed : float = abs(
-			approach_velocity.dot(tangent)
-		)
-
-		if (
-			steepness >= traction_start_angle_degrees
-			and incoming_track_speed < traction_min_speed
-		):
-			return
-
-
-	# ----------------------
-	# APPROACH DIRECTION
-	# ----------------------
-	# TODO: is this even what I want? 
-	var can_attach := (
+	# Holding down means magnetically grab the track.
+	#
+	# Otherwise only attach if:
+	# - we're basically stationary, or
+	# - we're moving toward the track.
+	var can_attach = (
 		force_snap
-		or approach_velocity.length() < 20.0
-		or approach_velocity.dot(normal) < 0.0
-		or get_slide_collision_count() > 0
+		or velocity.length() < 20.0
+		or velocity.dot(normal) < 0.0
 	)
 
 	if !can_attach:
 		return
 
-	attach_to_track(
-		sample,
-		approach_velocity
-	)
+	current_track = sample["track"]
+	floor_normal = normal
+
+	global_position = sample["point"]
+
+	var surface_right = floor_normal.rotated(PI / 2.0)
+
+	velocity = velocity.project(surface_right)
+
+	up_direction = floor_normal
+	rotation = Vector2.UP.angle_to(floor_normal)
 
 func get_surface_right() -> Vector2:
 	return floor_normal.rotated(PI / 2.0)
 
-func get_walk_target_speed(
-	direction: float
- ) -> float:
+func get_walk_target_speed(direction: float) -> float:
+	var movement_direction = (get_surface_right() * direction).normalized()
 
-	var movement_direction := (
-		get_surface_right() * direction
-	).normalized()
-
-	var downhill_amount := (
-		movement_direction.dot(Vector2.DOWN)
-	)
-
-	var slope_target : float = walk_max_speed
+	# +1 = straight downhill
+	#  0 = flat
+	# -1 = straight uphill
+	var downhill_amount = movement_direction.dot(Vector2.DOWN)
 
 	if downhill_amount >= 0.0:
-		slope_target = lerp(
+		return lerp(
 			walk_max_speed,
 			terminal_velocity,
 			downhill_amount
 		)
 
-	else:
-		var uphill_amount := -downhill_amount
+	var steepness = -downhill_amount
 
-		slope_target = lerp(
-			walk_max_speed,
-			walk_max_speed
-			* (1.0 - uphill_speed_reduction),
-			uphill_amount
-		)
-
-	var preserved_target := (
-		get_preserved_speed_for_direction(
-			movement_direction
-		)
-	)
-
-	return max(
-		slope_target,
-		preserved_target
+	return lerp(
+		walk_max_speed,
+		walk_max_speed * (1.0 - uphill_speed_reduction),
+		steepness
 	)
 
 func handle_walking(delta: float) -> void:
@@ -651,32 +517,81 @@ func handle_walking(delta: float) -> void:
 			walk_decerelation * delta
 		)
 
-func handle_track_jump() -> bool:
+func handle_jump() -> void:
 	if !Input.is_action_just_pressed("jump"):
-		return false
+		return
 
-	if current_track == null:
-		return false
-	
-	# TODO, like, at this point why don't we definte this variable as a field with a setter?
-	#       we use track_speed, like, everywhere
-	var track_speed : float = abs(
-		velocity.dot(track_tangent)
-	)
+	if current_track != null:
+		var surface_right = get_surface_right()
 
-	velocity += (
-		floor_normal
-		* jump_speed
-		* (
-			1.0
-			+ track_speed
-			/ running_jump_speed_divisor
+		var tangent_speed = abs(
+			velocity.dot(surface_right)
 		)
+
+		velocity += floor_normal * jump_speed * (
+			1.0 + tangent_speed / running_jump_speed_divisor
+		)
+
+		current_track = null
+		return
+
+	# Ordinary non-Curve2D fallback
+	if is_on_floor():
+		velocity.y = -jump_speed * (1.0 + velocity.x / running_jump_speed_divisor)
+
+func update_track_attachment(force_snap: bool) -> void:
+	if current_track == null:
+		return
+
+	var sample = sample_track(
+		current_track,
+		global_position,
+		floor_normal
 	)
 
-	detach_from_track()
+	if sample.is_empty():
+		current_track = null
+		return
 
-	return true
+	var track_point: Vector2 = sample["point"]
+	var normal: Vector2 = sample["normal"]
+	var distance: float = sample["distance"]
+
+	# TODO: mathematically, how does dot give us what we desire?
+	var normal_distance = (
+		global_position - track_point
+	).dot(normal)
+
+	if force_snap:
+		# Holding down: actively stick to the terrain.
+		if distance > track_snap_distance:
+			current_track = null
+			return
+
+	else:
+		# No magnetic sticking.
+		#
+		# If our natural motion takes us outward far enough,
+		# release the track and let the player fly.
+		if (
+			# TODO: what's the point of having these 2 things if same?
+			distance > track_follow_distance
+			or normal_distance > track_release_distance
+		):
+			current_track = null
+			return
+
+	# We are still constrained to this track.
+	global_position = track_point
+
+	floor_normal = normal
+	up_direction = normal
+
+	rotation = Vector2.UP.angle_to(normal)
+
+	# Keep only velocity along the track.
+	var surface_right = get_surface_right()
+	velocity = velocity.project(surface_right)
 
 func handle_fallback_rotation() -> void:
 	if get_slide_collision_count() > 0:
@@ -709,553 +624,3 @@ func refresh_nearby_tracks() -> void:
 
 			if !nearby_tracks.has(track):
 				nearby_tracks.append(track)
-
-func apply_track_sample(sample: Dictionary) -> void:
-	floor_normal = sample["normal"]
-	track_tangent = sample["tangent"]
-
-	up_direction = floor_normal
-
-	rotation = Vector2.UP.angle_to(
-		floor_normal
-	)
-
-func attach_to_track(
-	sample: Dictionary,
-	incoming_velocity: Vector2
- ) -> void:
-
-	current_track = sample["track"]
-	current_track_offset = sample["offset"]
-
-	apply_track_sample(sample)
-
-	# Snap ONCE when attaching.
-	global_position = sample["point"]
-
-	# Preserve the part of our incoming momentum
-	# that lies along the new track.
-	var track_speed := incoming_velocity.dot(
-		track_tangent
-	)
-
-	velocity = track_tangent * track_speed
-
-func detach_from_track() -> void:
-	current_track = null
-
-func move_to_track_point(
-	target_point: Vector2
- ) -> bool:
-
-	var motion := target_point - global_position
-
-	if motion.length_squared() <= 0.000001:
-		return true
-
-	var curved_collision_was_enabled := (
-		get_collision_mask_value(
-			curved_terrain_collision_layer
-		)
-	)
-
-	# Ignore Curved_terrain's coarse polygon during this one
-	# curve-following movement.
-	# TODO: wasteful, expensive??
-	set_collision_mask_value(
-		curved_terrain_collision_layer,
-		false
-	)
-
-	var collision := move_and_collide(motion)
-
-	set_collision_mask_value(
-		curved_terrain_collision_layer,
-		curved_collision_was_enabled
-	)
-
-	return collision == null
-
-func get_preserved_speed_for_direction(
-	world_direction: Vector2
- ) -> float:
-
-	if world_direction == Vector2.ZERO:
-		return walk_max_speed
-
-	var direction := world_direction.normalized()
-
-	var x_weight : float = abs(direction.x)
-	var y_weight : float = abs(direction.y)
-
-	var weight_sum := x_weight + y_weight
-
-	if weight_sum <= 0.0001:
-		return walk_max_speed
-
-	var preserved_speed : float = (
-		x_weight * max_speed_h
-		+ y_weight * max_speed_v
-	) / weight_sum
-
-	return max(
-		walk_max_speed,
-		preserved_speed
-	)
-
-func apply_track_input(
-	track_speed: float,
-	delta: float
- ) -> float:
-
-	var direction := Input.get_axis(
-		"left",
-		"right"
-	)
-	
-	#TODO account for controller dead zones
-	if direction == 0.0:
-		return move_toward(
-			track_speed,
-			0.0,
-			walk_decerelation * delta
-		)
-
-
-	var surface_right := get_surface_right()
-
-	# track_tangent points in the direction of increasing
-	# Curve2D offset. Surface-right might point the opposite way.
-	var right_sign := 1.0
-
-	if track_tangent.dot(surface_right) < 0.0:
-		right_sign = -1.0
-
-	var desired_sign : float = sign(direction) * right_sign
-
-	var target_speed := get_walk_target_speed(
-		direction
-	)
-
-
-	# If trying to reverse direction:
-	# BRAKE first using walk_decerelation.
-	if (
-		abs(track_speed) > 0.001
-		and sign(track_speed) != sign(desired_sign)
-	):
-		track_speed = move_toward(
-			track_speed,
-			0.0,
-			walk_decerelation * delta
-		)
-
-		# If we are still moving in the old direction after braking,
-		# stop here for this frame.
-		if abs(track_speed) > 0.001:
-			return track_speed
-
-		# We reached (approximately) zero this frame.
-		# Continue below so input can immediately accelerate us
-		# into the requested direction instead of getting stuck at 0.
-		track_speed = 0.0
-
-
-	# Don't punish already-earned momentum.
-	#TODO: You sure we want the track_speed to be able to go higher than target_speed? maybe...
-	if (
-		sign(track_speed) == sign(desired_sign)
-		and abs(track_speed) > target_speed
-	):
-		return track_speed
-
-
-	return move_toward(
-		track_speed,
-		desired_sign * target_speed,
-		walk_acceleration * delta
-	)
-
-#TODO this might not be at all what I want. you're telling me we're completely
-# magnetized if we only walk fast enough? But I want the player to be able to fly off
-# even if the angle is very shallow, if the player is going super fast enough.
-func has_track_traction(
-	track_speed: float,
-	force_snap: bool
- ) -> bool:
-
-	if force_snap:
-		return true
-
-	var steepness : float = abs(
-		rad_to_deg(
-			Vector2.UP.angle_to(floor_normal)
-		)
-	)
-
-	if steepness < traction_start_angle_degrees:
-		return true
-
-	return abs(track_speed) >= traction_min_speed
-
-func try_transition_to_nearby_track(
-	old_velocity: Vector2
- ) -> bool:
-
-	var sample := find_nearest_track(
-		global_position,
-		track_transition_distance,
-		current_track
-	)
-
-	if sample.is_empty():
-		return false
-
-	attach_to_track(
-		sample,
-		old_velocity
-	)
-
-	return true
-
-func handle_track_movement(
-	delta: float,
-	force_snap: bool
- ) -> void:
-
-	if current_track == null:
-		return
-
-	var current_sample := sample_track_at_offset(
-		current_track,
-		current_track_offset
-	)
-
-	if current_sample.is_empty():
-		detach_from_track()
-		return
-
-	apply_track_sample(current_sample)
-
-
-	# Scalar speed along increasing Curve2D offset.
-	var track_speed := velocity.dot(
-		track_tangent
-	)
-
-
-	# ====================================================
-	# GRAVITY ALONG THE TRACK
-	# ====================================================
-	
-	#TODO bruh I might get rid of no_grav_time
-	if no_grav_time.is_stopped():
-		var gravity := (
-			Vector2.DOWN
-			* get_gravity().length()
-		)
-		
-		#TODO do I even want gravity to influence the player when walking on track?
-		#     we already have slope speed varaibles to determine that...
-		track_speed += (
-			gravity.dot(track_tangent)
-			* delta
-		)
-
-
-	# ====================================================
-	# PLAYER INPUT
-	# ====================================================
-
-	track_speed = apply_track_input(
-		track_speed,
-		delta
-	)
-
-
-	# ====================================================
-	# TRACTION
-	# ====================================================
-
-	if !has_track_traction(
-		track_speed,
-		force_snap
-	):
-		velocity = (
-			track_tangent
-			* track_speed
-		)
-
-		detach_from_track()
-		return
-
-
-	# ====================================================
-	# NEXT OFFSET
-	# ====================================================
-
-	var curve_length := (
-		current_track.curve.get_baked_length()
-	)
-	
-	#TODO, wait, what if curve very steep all of a sudden? won't we zip up too fast?
-	#      this part might be ugly, we might need to reevaluate
-	var next_offset := (
-		current_track_offset
-		+ track_speed * delta
-	)
-
-
-	# ====================================================
-	# END OF THIS CURVE
-	# ====================================================
-	# TODO What even is all this garbage? what if I want a circle in mid-air
-	#      that I can infinitely round around on? why do you want to kick me out for no reason?
-	if (
-		next_offset < 0.0
-		or next_offset > curve_length
-	):
-		var end_offset : float = clamp(
-			next_offset,
-			0.0,
-			curve_length
-		)
-
-		var end_sample := sample_track_at_offset(
-			current_track,
-			end_offset
-		)
-
-		if end_sample.is_empty():
-			detach_from_track()
-			return
-
-		var old_velocity := (
-			track_tangent
-			* track_speed
-		)
-
-		move_to_track_point(
-			end_sample["point"]
-		)
-
-		current_track_offset = end_offset
-		apply_track_sample(end_sample)
-
-		velocity = (
-			track_tangent
-			* track_speed
-		)
-
-		if try_transition_to_nearby_track(
-			old_velocity
-		):
-			return
-
-		detach_from_track()
-		return
-
-
-	# ====================================================
-	# SAMPLE NEXT CURVE POSITION
-	# ====================================================
-
-	var next_sample := sample_track_at_offset(
-		current_track,
-		next_offset
-	)
-
-	if next_sample.is_empty():
-		detach_from_track()
-		return
-
-
-	var next_normal: Vector2 = next_sample["normal"]
-
-	# IMPORTANT:
-	# Velocity still follows the OLD tangent here.
-	#
-	# This lets us detect whether the terrain is curving
-	# away from our existing momentum.
-	# TODO do we only do this outward_speed stuff when going from one track to another?
-	#      But I want it to work regardless...
-	var pre_reorientation_velocity := (
-		track_tangent
-		* track_speed
-	)
-
-	var outward_speed := (
-		pre_reorientation_velocity
-		.dot(next_normal)
-	)
-
-
-	# ====================================================
-	# NATURAL RAMP LAUNCH
-	# ====================================================
-
-	if (
-		!force_snap
-		and outward_speed > track_detach_normal_speed
-		#TODO will all this even work? isn't there some other part of the code ruining this?
-	):
-		velocity = pre_reorientation_velocity
-
-		detach_from_track()
-		return
-
-
-	# ====================================================
-	# FOLLOW THE CURVE
-	# ====================================================
-
-	var reached_target := move_to_track_point(
-		next_sample["point"]
-	)
-
-	if !reached_target:
-		# We hit some NON-curved solid, e.g. a cube.
-		#
-		# Rare case: resynchronise our curve offset
-		# to where physics actually stopped us.
-		current_track_offset = (
-			current_track.curve.get_closest_offset(
-				current_track.to_local(
-					global_position
-				)
-			)
-		)
-
-		var blocked_sample := sample_track_at_offset(
-			current_track,
-			current_track_offset
-		)
-
-		if !blocked_sample.is_empty():
-			apply_track_sample(blocked_sample)
-
-		# TODO why do we get to a complete standstill? what if I run into a spring on the track?
-		#      what if I wanna bounce away from the thing I collided with?
-		velocity = Vector2.ZERO
-		return
-
-
-	current_track_offset = next_offset
-	apply_track_sample(next_sample)
-
-
-	# THIS is the Fancy Pants bit:
-	#
-	# Keep the scalar speed and rotate its vector with
-	# the new curve tangent.
-	#
-	# We do NOT continually project velocity and lose
-	# speed every time the terrain bends.
-	velocity = (
-		track_tangent
-		* track_speed
-	)
-
-#TODO why 2 different functions for walking? why not 2 in 1 function?!?!
-func handle_free_walking(delta: float) -> void:
-	var direction := Input.get_axis(
-		"left",
-		"right"
-	)
-
-	if direction != 0.0:
-		var target_speed : float = max(
-			walk_max_speed,
-			max_speed_h
-		)
-
-		# Brake before reversing.
-		if (
-			abs(velocity.x) > 0.001
-			and sign(velocity.x) != sign(direction)
-		):
-			velocity.x = move_toward(
-				velocity.x,
-				0.0,
-				walk_decerelation * delta
-			)
-
-		# Don't destroy earned speed.
-		elif (
-			sign(velocity.x) == sign(direction)
-			and abs(velocity.x) > target_speed
-		):
-			pass
-
-		else:
-			velocity.x = move_toward(
-				velocity.x,
-				direction * target_speed,
-				walk_acceleration * delta
-			)
-
-	elif is_on_floor():
-		velocity.x = move_toward(
-			velocity.x,
-			0.0,
-			walk_decerelation * delta
-		)
-
-func handle_free_jump() -> void:
-	if (
-		Input.is_action_just_pressed("jump")
-		and is_on_floor()
-	):
-		velocity.y = (
-			-jump_speed
-			* (
-				1.0
-				+ abs(velocity.x)
-				/ running_jump_speed_divisor
-			)
-		)
-
-func handle_free_state(
-	delta: float,
-	force_snap: bool
-) -> void:
-
-	# WORLD GRAVITY
-	if no_grav_time.is_stopped():
-		velocity += (
-			Vector2.DOWN
-			* get_gravity().length()
-			* delta
-		)
-
-	handle_free_jump()
-
-	handle_free_walking(delta)
-	
-	# TODO: what is this doing here? I want to always be able to hammer boost
-	hammer_boosting_routine()
-
-
-	# Save PRE-COLLISION velocity.
-	#
-	# This is useful both for proper attachment and
-	# your possible future "hard ramp impact" reward.
-	var approach_velocity := velocity
-
-
-	# Real polygon physics while airborne/free.
-	move_and_slide()
-
-
-	#TODO shouldn't we only do this part when we're actually approaching a track? to save performance
-	# Now we're on the SAFE side of collision geometry.
-	refresh_nearby_tracks()
-
-	try_attach_to_track(
-		force_snap,
-		approach_velocity
-	)
-
-
-	if current_track == null:
-		handle_fallback_rotation()

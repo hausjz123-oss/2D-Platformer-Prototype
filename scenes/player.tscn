@@ -27,6 +27,19 @@ animations = [{
 collision_mask = 3
 script = ExtResource("1_g2els")
 walk_max_speed = 600.0
+walk_decerelation = null
+walk_acceleration = null
+uphill_speed_reduction = null
+running_jump_speed_divisor = null
+track_contact_distance = null
+track_follow_distance = null
+track_snap_distance = null
+track_release_distance = null
+jump_speed = null
+spedometer_max_showable_h = null
+spedometer_max_showable_v = null
+sprite_rotation_speed = null
+terminal_velocity = null
 
 [node name="Hammer_Hurtbox" type="Area2D" parent="." unique_id=1026386652]
 position = Vector2(131, -164)
@@ -156,7 +169,7 @@ scale = Vector2(4.583552, 4.583552)
 shape = SubResource("CapsuleShape2D_384fj")
 
 [node name="Floor_detector" type="Area2D" parent="." unique_id=1389296821]
-scale = Vector2(6.3840466, 3.625)
+scale = Vector2(1.1040462, 3.625)
 collision_mask = 3
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Floor_detector" unique_id=248681545]
