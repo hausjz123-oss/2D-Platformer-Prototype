@@ -29,12 +29,8 @@ script = ExtResource("1_g2els")
 walk_max_speed = 600.0
 
 [node name="Hammer_Hurtbox" type="Area2D" parent="." unique_id=1026386652]
-<<<<<<< HEAD
 position = Vector2(131, -164)
 collision_mask = 3
-=======
-position = Vector2(131, -95)
->>>>>>> parent of 5ab59c5 (Update player.tscn)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Hammer_Hurtbox" unique_id=1776399906]
 position = Vector2(-131, 97)
@@ -43,7 +39,7 @@ scale = Vector2(22.278505, 22.278505)
 shape = SubResource("CircleShape2D_384fj")
 
 [node name="Proximity_Levels" type="Node2D" parent="." unique_id=1058067449]
-position = Vector2(0, 1)
+position = Vector2(0, -68)
 
 [node name="proximity_level_1" type="Area2D" parent="Proximity_Levels" unique_id=1017091978]
 scale = Vector2(8.26, 8.26)
@@ -64,18 +60,18 @@ scale = Vector2(17.755, 17.755)
 shape = SubResource("CircleShape2D_hlod6")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=229647181]
-position = Vector2(-8.742431e-06, -0.5729522)
+position = Vector2(-8.742431e-06, -69.572945)
 scale = Vector2(0.71618, 1.0653177)
 sprite_frames = SubResource("SpriteFrames_384fj")
 
 [node name="RayCast2D" type="RayCast2D" parent="." unique_id=401702390]
-position = Vector2(0, 1)
+position = Vector2(0, -68)
 scale = Vector2(3.1587424, 5.865334)
 target_position = Vector2(70, 0)
 collision_mask = 3
 
 [node name="Proximity_Detector" type="Node2D" parent="." unique_id=793240628]
-position = Vector2(-96, -136)
+position = Vector2(-96, -205)
 scale = Vector2(2.5570304, 2.5570304)
 
 [node name="Prox_Shine" type="Polygon2D" parent="Proximity_Detector" unique_id=335067714]
@@ -98,7 +94,7 @@ polygon = PackedVector2Array(-29.837433, -7.2171326, -31.837433, 14.782867, -13.
 uv = PackedVector2Array(-109.75, -26, -111.75, -4, -93.25, 12, -60.25, 8.5, -49.25, -12, -56.25, -38, -74.25, -55, -95.25, -50)
 
 [node name="Spedometer_H" type="Node2D" parent="." unique_id=1083741336]
-position = Vector2(-138, 94)
+position = Vector2(-138, 25)
 
 [node name="Background_H" type="ColorRect" parent="Spedometer_H" unique_id=1605323299]
 offset_left = -42.0
@@ -122,7 +118,7 @@ texture = ExtResource("3_qhqgy")
 one_shot = true
 
 [node name="Spedometer_V" type="Node2D" parent="." unique_id=1273506005]
-position = Vector2(93, 28)
+position = Vector2(93, -41)
 rotation = -1.5707964
 
 [node name="Background_V" type="ColorRect" parent="Spedometer_V" unique_id=859605499]
@@ -155,17 +151,13 @@ wait_time = 10.885
 one_shot = true
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1660034217]
+position = Vector2(0, -69)
 scale = Vector2(4.583552, 4.583552)
 shape = SubResource("CapsuleShape2D_384fj")
 
 [node name="Floor_detector" type="Area2D" parent="." unique_id=1389296821]
-<<<<<<< HEAD
 scale = Vector2(6.3840466, 3.625)
 collision_mask = 3
-=======
-position = Vector2(0, 69)
-scale = Vector2(1.1040462, 3.625)
->>>>>>> parent of 5ab59c5 (Update player.tscn)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Floor_detector" unique_id=248681545]
 shape = SubResource("RectangleShape2D_qhqgy")
