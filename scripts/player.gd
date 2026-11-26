@@ -67,6 +67,8 @@ func _physics_process(delta: float) -> void:
 	# update up_direction every tick
 	up_direction = Vector2.UP.rotated(rotation)
 	
+	
+	
 	# floor_detector colliders w/o self
 	var floor_coll_wo_self : Array[Node2D] = floor_detector.get_overlapping_bodies()
 	if(floor_coll_wo_self.has(self)):
@@ -93,11 +95,28 @@ func _physics_process(delta: float) -> void:
 	# Handle jump.
 	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity -= Vector2.UP.rotated(rotation)*JUMP_VELOCITY * (1.0+abs(velocity.x)/1000)
+		$jumpSFX.play()
 
 	# Get the input direction and handle the movement/deceleration.
 	var direction := Input.get_axis("left", "right")
 	var horizontal_direction = up_direction.rotated(PI / 2.0)
 	var movement_direction = horizontal_direction * direction
+	
+	#flip sprite		
+	if direction > 0:
+		animated_sprite_2d.flip_h = false
+	if direction < 0:
+		animated_sprite_2d.flip_h = true
+		
+	# player animations
+	if is_on_floor():
+		if direction == 0:
+			animated_sprite_2d.play("idle")
+		else:
+			animated_sprite_2d.play("run")
+			$AnimationPlayer.play("footstep_soundEffect")
+	else:
+		animated_sprite_2d.play("jump")
 	
 	if direction:
 		# down slope max speed is = terminal velocity

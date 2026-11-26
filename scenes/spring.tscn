@@ -11,12 +11,20 @@
 script = ExtResource("1_6vrsj")
 Strength_Mode = 1
 
+[node name="ColorRect" type="ColorRect" parent="." unique_id=1479719794]
+offset_left = -107.0
+offset_top = -97.0
+offset_right = 106.0
+offset_bottom = 98.0
+color = Color(0.9999997, 0.09889301, 0.99900216, 1)
+
 [node name="Springaling" type="CollisionShape2D" parent="." unique_id=1761038515]
 rotation = 1.5707964
 scale = Vector2(8.421489, 9.282622)
 shape = SubResource("RectangleShape2D_384fj")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=740345780]
+modulate = Color(0.831, 0.69, 0, 1)
 rotation = 1.5707964
 texture = ExtResource("1_61klm")
 
