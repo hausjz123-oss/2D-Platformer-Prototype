@@ -1,7 +1,7 @@
 extends CharacterBody2D
 
 
-@export var walk_max_speed = 300.0
+@export var walk_max_speed = 600.0
 @export var walk_decerelation := 1800.0
 @export var walk_acceleration := 1800.0
 const JUMP_VELOCITY = -400.0
@@ -32,6 +32,7 @@ var sprite_rotation := 5.0
 @onready var speed_limit_v_decay_timer: Timer = $Spedometer_V/Speed_Limit_V_Decay_Timer
 @onready var floor_detector: Area2D = $Floor_detector
 @onready var air_flip_timer: Timer = $Air_Flip_Timer
+@onready var hammer_cooldown_meter: ColorRect = $Hammer_cooldown_meter/hammer_cooldown_meter_background/hammer_cooldown_meter
 var PDrotation : float
 var SHrotation : float
 var SVrotation : float
@@ -48,6 +49,7 @@ func _process(_delta: float) -> void:
 	if (Input.is_action_just_pressed("reload map")): get_tree().reload_current_scene()
 	# Raycast
 	ray_cast_2d.rotation = collision_shape_2d.global_position.direction_to(get_global_mouse_position()).angle()
+	ray_cast_2d.position = collision_shape_2d.global_position
 	
 	# Proximity_Detector
 	proximity_detector_routine() # TODO improve proximity detector, because it's very useless right now
@@ -58,6 +60,7 @@ func _process(_delta: float) -> void:
 	# some hammer cooldown code
 	if ((is_on_floor() or is_on_ceiling() or is_on_wall()) and hammer_cooldown.time_left > 0): 
 		hammer_cooldown.stop()
+	hammer_cooldown_meter.size.x = remap(hammer_cooldown.time_left, 0.5, 0, 0, 450.0)
 
 func _physics_process(delta: float) -> void:
 	print(get_slide_collision_count())

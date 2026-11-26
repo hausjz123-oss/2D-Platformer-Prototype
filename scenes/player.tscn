@@ -63,6 +63,7 @@ scale = Vector2(0.71618, 1.0653177)
 sprite_frames = SubResource("SpriteFrames_384fj")
 
 [node name="RayCast2D" type="RayCast2D" parent="." unique_id=401702390]
+top_level = true
 position = Vector2(0, -68)
 scale = Vector2(3.1587424, 5.865334)
 target_position = Vector2(70, 0)
@@ -142,6 +143,22 @@ one_shot = true
 [node name="Hammer_cooldown" type="Timer" parent="." unique_id=1346299692]
 wait_time = 0.5
 one_shot = true
+
+[node name="Hammer_cooldown_meter" type="Node2D" parent="." unique_id=836686353]
+
+[node name="hammer_cooldown_meter_background" type="ColorRect" parent="Hammer_cooldown_meter" unique_id=1743727970]
+offset_left = -226.0
+offset_top = 98.19838
+offset_right = 226.0
+offset_bottom = 125.0
+
+[node name="hammer_cooldown_meter" type="ColorRect" parent="Hammer_cooldown_meter/hammer_cooldown_meter_background" unique_id=1476859584]
+layout_mode = 0
+offset_left = 1.0
+offset_top = 0.8016205
+offset_right = 451.0
+offset_bottom = 24.80162
+color = Color(1, 0, 0.45882353, 1)
 
 [node name="No_Grav_Time" type="Timer" parent="." unique_id=618538228]
 wait_time = 10.885

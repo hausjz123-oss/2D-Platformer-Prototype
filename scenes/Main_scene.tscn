@@ -76,6 +76,8 @@ texture = ExtResource("3_ard34")
 [sub_resource type="TileSet" id="TileSet_384fj"]
 sources/0 = SubResource("TileSetAtlasSource_fkd63")
 
+[sub_resource type="SphereMesh" id="SphereMesh_ugdbb"]
+
 [sub_resource type="CircleShape2D" id="CircleShape2D_384fj"]
 
 [sub_resource type="Curve2D" id="Curve2D_uxkiq"]
@@ -130,7 +132,12 @@ Strength_Mode = 2
 position = Vector2(-563.9999, 563.9999)
 scale = Vector2(37.659775, 37.659775)
 
+[node name="MeshInstance2D" type="MeshInstance2D" parent="StaticBody2D" unique_id=940054319]
+scale = Vector2(19.85459, 19.85459)
+mesh = SubResource("SphereMesh_ugdbb")
+
 [node name="CollisionShape2D" type="CollisionShape2D" parent="StaticBody2D" unique_id=75896370]
+scale = Vector2(0.99999994, 0.99999994)
 shape = SubResource("CircleShape2D_384fj")
 
 [node name="Curved_terrain" type="Path2D" parent="." unique_id=1535241864]
@@ -150,8 +157,7 @@ edge_texture = ExtResource("3_ard34")
 center_texture = ExtResource("3_ard34")
 metadata/_custom_type_script = "uid://cfs20w8fjteig"
 
-[node name="Player" parent="." unique_id=144186611 instance=ExtResource("1_eduo0")]
-position = Vector2(110, 347)
-walk_max_speed = 600.0
+[node name="Player" parent="." unique_id=1371040664 instance=ExtResource("1_eduo0")]
+position = Vector2(124, 339)
 
-[node name="Camera2D2" type="Camera2D" parent="Player" unique_id=316202143]
+[node name="Camera2D" type="Camera2D" parent="Player" unique_id=195124804]
