@@ -607,7 +607,7 @@ func handle_fallback_rotation() -> void:
 		up_direction = Vector2.UP
 
 func refresh_nearby_tracks() -> void:
-	nearby_tracks.clear()
+	nearby_tracks.clear() 
 
 	for body in floor_detector.get_overlapping_bodies():
 		if body == self:
