@@ -129,15 +129,27 @@ shape = SubResource("CircleShape2D_384fj")
 
 [node name="Curved_terrain" type="Path2D" parent="." unique_id=1535241864]
 position = Vector2(1545, 477)
-scale = Vector2(0.6179411, 0.6403834)
 curve = SubResource("Curve2D_uxkiq")
 script = ExtResource("5_4a8l0")
 edge_texture = ExtResource("3_ard34")
 center_texture = ExtResource("3_ard34")
+closed_loop = null
+invert_normals = null
 metadata/_custom_type_script = "uid://cfs20w8fjteig"
 
 [node name="Player" parent="." unique_id=144186611 instance=ExtResource("1_eduo0")]
 position = Vector2(110, 347)
+walk_acceleration = 1800.0
+walk_decerelation = 1800.0
+uphill_speed_reduction = 0.0
+jump_speed = 400.0
+running_jump_speed_divisor = 1000.0
+terminal_velocity = 1500.0
+track_contact_distance = 16.0
+track_snap_distance = 60.0
+spedometer_max_showable_h = 1500.0
+spedometer_max_showable_v = 1500.0
+sprite_rotation_speed = 10.0
 
 [node name="Camera2D2" type="Camera2D" parent="Player" unique_id=316202143]
 zoom = Vector2(0.705, 0.705)

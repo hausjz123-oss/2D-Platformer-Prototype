@@ -6,7 +6,15 @@ extends Path2D
 @export var edge_texture: Texture2D
 @export var center_texture: Texture2D
 @export var visible_collision: bool = true
-@export var normal_test_distance := 2.0
+
+## Tick if the curve's first and last point are the same spot and you want to
+## run around it forever (a full circle, a figure you can orbit...).
+@export var closed_loop := false
+
+## The player walks on the OUTSIDE of the filled shape (the side away from the fill).
+## Tick this to make him walk on the other side, e.g. on the INSIDE of a
+## loop-de-loop ring.
+@export var invert_normals := false
 
 # Visual curve quality.
 # Higher stages = allows more subdivisions.
@@ -22,6 +30,10 @@ var polygon2d: Polygon2D
 var line2d: Line2D
 var collision_polygon2d: CollisionPolygon2D
 
+# +1: the fill is on the RIGHT of the direction the curve is drawn (clockwise on screen).
+# -1: the fill is on the LEFT.  Worked out once in generate_terrain().
+var outward_sign := 1.0
+
 
 func _ready() -> void:
 	add_to_group("curved_track")
@@ -33,7 +45,6 @@ func _ready() -> void:
 	polygon2d.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	add_child(polygon2d)
 
-
 	# --------------------
 	# EDGE
 	# --------------------
@@ -42,18 +53,15 @@ func _ready() -> void:
 	line2d.texture_mode = Line2D.LINE_TEXTURE_TILE
 	add_child(line2d)
 
-
 	# --------------------
 	# PHYSICAL COLLISION
 	# --------------------
 	var collision_staticbody := StaticBody2D.new()
-
 	collision_staticbody.collision_layer = generated_collision_layer
 	add_child(collision_staticbody)
 
 	collision_polygon2d = CollisionPolygon2D.new()
 	collision_staticbody.add_child(collision_polygon2d)
-
 
 	generate_terrain()
 
@@ -74,44 +82,30 @@ func generate_terrain() -> void:
 		line2d.points = PackedVector2Array()
 		return
 
-
 	# ============================================================
 	# VISUAL GEOMETRY
-	#
-	# This is independent from the Curve2D Bake Interval.
-	# tessellate() creates additional points where required so the
-	# visible terrain can look smooth even with a coarse bake interval.
+	# Independent from the Curve2D Bake Interval.
 	# ============================================================
-
 	var visual_points: PackedVector2Array = curve.tessellate(
 		visual_tessellation_stages,
 		visual_tolerance_degrees
 	)
 
-
 	# ============================================================
 	# COLLISION GEOMETRY
-	#
-	# This intentionally uses the baked points.
-	# Therefore Bake Interval controls physics complexity/performance
-	# without forcing the visuals to use the same resolution.
+	# Uses the baked points, so Bake Interval controls physics complexity.
 	# ============================================================
-
 	var collider_points: PackedVector2Array = curve.get_baked_points()
-
 
 	# --------------------
 	# CENTER / FILL
 	# --------------------
-
 	polygon2d.polygon = visual_points
 	polygon2d.texture = center_texture
-
 
 	# --------------------
 	# EDGE
 	# --------------------
-
 	var line_points := visual_points.duplicate()
 
 	# Close the visual outline.
@@ -121,11 +115,9 @@ func generate_terrain() -> void:
 	line2d.points = line_points
 	line2d.texture = edge_texture
 
-
 	# --------------------
 	# COLLISION
 	# --------------------
-
 	if collider_points.size() > 2:
 		collision_polygon2d.polygon = collider_points
 	else:
@@ -133,27 +125,29 @@ func generate_terrain() -> void:
 
 	collision_polygon2d.visible = visible_collision
 
-func get_outward_normal_local(
-	local_track_point: Vector2,
-	local_tangent: Vector2
-) -> Vector2:
+	# --------------------
+	# WHICH SIDE IS "OUTSIDE"?
+	# --------------------
+	outward_sign = _compute_outward_sign(visual_points)
 
-	var normal := local_tangent.rotated(-PI / 2.0).normalized()
 
-	if polygon2d == null or polygon2d.polygon.size() < 3:
-		return normal
+## Shoelace formula. Positive area (in Godot's y-down coordinates) means the
+## shape is drawn clockwise on screen, so the fill is to the right of the
+## drawing direction and "outside" is to the left.
+func _compute_outward_sign(points: PackedVector2Array) -> float:
+	var area2 := 0.0
+	for i in points.size():
+		var a := points[i]
+		var b := points[(i + 1) % points.size()]
+		area2 += a.x * b.y - b.x * a.y
 
-	var test_point := (
-		local_track_point
-		+ normal * normal_test_distance
-	)
+	var result := 1.0 if area2 >= 0.0 else -1.0
+	return -result if invert_normals else result
 
-	# If this side points INTO the filled terrain,
-	# then the opposite normal is the outward one.
-	if Geometry2D.is_point_in_polygon(
-		test_point,
-		polygon2d.polygon
-	):
-		normal = -normal
 
-	return normal
+## Unit vector pointing out of the terrain, for a direction of travel along the
+## curve given in WORLD space. Cheap: no polygon tests.
+func get_outward_normal(global_tangent: Vector2) -> Vector2:
+	# A mirrored (negatively scaled) node flips which side the fill is on.
+	var mirrored := signf(global_transform.determinant())
+	return global_tangent.rotated(-PI / 2.0 * outward_sign * mirrored).normalized()
